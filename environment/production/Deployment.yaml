@@ -23,7 +23,7 @@ spec:
               name: http
           envFrom:
             - secretRef:
-                name: axy8s-backend-api-secret
+                name: axy8s-backend-secret
           env:
             - name: LOG_LEVEL
               value: "INFO"
