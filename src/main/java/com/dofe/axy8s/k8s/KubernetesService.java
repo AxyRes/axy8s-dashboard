@@ -9,6 +9,8 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.CronJob;
 import io.fabric8.kubernetes.api.model.apps.ReplicaSet;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
+import io.fabric8.kubernetes.api.model.apps.DaemonSet;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.springframework.stereotype.Service;
 
@@ -451,4 +453,95 @@ public class KubernetesService {
                 .withName(name)
                 .delete();
     }
+
+        // ========== DAEMONSETS ==========
+
+    public java.util.List<DaemonSet> listDaemonSets(String namespace) {
+        return client.apps()
+                .daemonSets()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public DaemonSet getDaemonSet(String namespace, String name) {
+        return client.apps()
+                .daemonSets()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public DaemonSet createOrUpdateDaemonSet(String namespace, DaemonSet daemonSet) {
+        if (daemonSet.getMetadata() != null) {
+            String bodyNs = daemonSet.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                daemonSet.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "DaemonSet namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.apps()
+                .daemonSets()
+                .inNamespace(namespace)
+                .resource(daemonSet)
+                .createOrReplace();
+    }
+
+    public void deleteDaemonSet(String namespace, String name) {
+        client.apps()
+                .daemonSets()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+
+        // ========== PERSISTENTVOLUMECLAIMS (PVC) ==========
+
+    public java.util.List<PersistentVolumeClaim> listPersistentVolumeClaims(String namespace) {
+        return client.persistentVolumeClaims()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public PersistentVolumeClaim getPersistentVolumeClaim(String namespace, String name) {
+        return client.persistentVolumeClaims()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public PersistentVolumeClaim createOrUpdatePersistentVolumeClaim(
+            String namespace,
+            PersistentVolumeClaim pvc
+    ) {
+        if (pvc.getMetadata() != null) {
+            String bodyNs = pvc.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                pvc.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "PVC namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.persistentVolumeClaims()
+                .inNamespace(namespace)
+                .resource(pvc)
+                .createOrReplace();
+    }
+
+    public void deletePersistentVolumeClaim(String namespace, String name) {
+        client.persistentVolumeClaims()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+
+
 }

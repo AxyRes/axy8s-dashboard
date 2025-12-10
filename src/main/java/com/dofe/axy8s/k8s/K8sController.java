@@ -12,6 +12,8 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.CronJob;
 import io.fabric8.kubernetes.api.model.apps.ReplicaSet;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
+import io.fabric8.kubernetes.api.model.apps.DaemonSet;
+import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -715,6 +717,152 @@ public class K8sController {
         }
 
         kubernetesService.deleteStatefulSet(namespace, name);
+    }
+
+        // ========== DAEMONSETS ==========
+
+    @GetMapping("/namespaces/{namespace}/daemonsets")
+    public java.util.List<DaemonSet> getDaemonSets(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        return kubernetesService.listDaemonSets(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/daemonsets/{name}")
+    public DaemonSet getDaemonSet(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        DaemonSet ds = kubernetesService.getDaemonSet(namespace, name);
+        if (ds == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "DaemonSet not found: " + name
+            );
+        }
+        return ds;
+    }
+
+    @PostMapping("/namespaces/{namespace}/daemonsets")
+    public DaemonSet createOrUpdateDaemonSet(
+            @PathVariable String namespace,
+            @RequestBody DaemonSet daemonSet,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update daemonsets"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdateDaemonSet(namespace, daemonSet);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/daemonsets/{name}")
+    public void deleteDaemonSet(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete daemonsets"
+            );
+        }
+
+        kubernetesService.deleteDaemonSet(namespace, name);
+    }
+
+        // ========== PERSISTENTVOLUMECLAIMS (PVC) ==========
+
+    @GetMapping("/namespaces/{namespace}/persistentvolumeclaims")
+    public java.util.List<PersistentVolumeClaim> getPersistentVolumeClaims(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        return kubernetesService.listPersistentVolumeClaims(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/persistentvolumeclaims/{name}")
+    public PersistentVolumeClaim getPersistentVolumeClaim(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        PersistentVolumeClaim pvc = kubernetesService.getPersistentVolumeClaim(namespace, name);
+        if (pvc == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "PVC not found: " + name
+            );
+        }
+        return pvc;
+    }
+
+    @PostMapping("/namespaces/{namespace}/persistentvolumeclaims")
+    public PersistentVolumeClaim createOrUpdatePersistentVolumeClaim(
+            @PathVariable String namespace,
+            @RequestBody PersistentVolumeClaim pvc,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update PVCs"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdatePersistentVolumeClaim(namespace, pvc);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/persistentvolumeclaims/{name}")
+    public void deletePersistentVolumeClaim(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete PVCs"
+            );
+        }
+
+        kubernetesService.deletePersistentVolumeClaim(namespace, name);
     }
 
 
