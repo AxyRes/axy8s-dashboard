@@ -11,22 +11,24 @@
     <name>axy8s-backend</name>
     <description>AXY8S Kubernetes Dashboard Backend</description>
 
+    <!-- ĐỪNG dùng ${spring.boot.version} ở đây -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.5</version>
+        <relativePath/>
+    </parent>
+
     <properties>
         <java.version>21</java.version>
+        <!-- Có thể giữ lại, nhưng không dùng cho parent nữa, dùng cho chỗ khác nếu thích -->
         <spring.boot.version>3.3.5</spring.boot.version>
         <fabric8.k8s.client.version>6.9.2</fabric8.k8s.client.version>
         <jjwt.version>0.11.5</jjwt.version>
     </properties>
 
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>${spring.boot.version}</version>
-        <relativePath/>
-    </parent>
-
     <dependencies>
-        <!-- Web -->
+        <!-- Spring Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
