@@ -4,6 +4,7 @@ import io.fabric8.kubernetes.api.model.Namespace;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.springframework.stereotype.Service;
 
@@ -172,6 +173,88 @@ public class KubernetesService {
 
     public void deleteService(String namespace, String name) {
         client.services()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+
+    // ========== CONFIGMAPS ==========
+
+    public java.util.List<ConfigMap> listConfigMaps(String namespace) {
+        return client.configMaps()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public ConfigMap getConfigMap(String namespace, String name) {
+        return client.configMaps()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public ConfigMap createOrUpdateConfigMap(String namespace, ConfigMap configMap) {
+        if (configMap.getMetadata() != null) {
+            String bodyNs = configMap.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                configMap.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "ConfigMap namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.configMaps()
+                .inNamespace(namespace)
+                .resource(configMap)
+                .createOrReplace();
+    }
+
+    public void deleteConfigMap(String namespace, String name) {
+        client.configMaps()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+    
+    // ========== SECRETS ==========
+
+    public java.util.List<Secret> listSecrets(String namespace) {
+        return client.secrets()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public Secret getSecret(String namespace, String name) {
+        return client.secrets()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public Secret createOrUpdateSecret(String namespace, Secret secret) {
+        if (secret.getMetadata() != null) {
+            String bodyNs = secret.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                secret.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "Secret namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.secrets()
+                .inNamespace(namespace)
+                .resource(secret)
+                .createOrReplace();
+    }
+
+    public void deleteSecret(String namespace, String name) {
+        client.secrets()
                 .inNamespace(namespace)
                 .withName(name)
                 .delete();

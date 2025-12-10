@@ -7,6 +7,7 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.Secret;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -255,6 +256,167 @@ public class K8sController {
         }
 
         kubernetesService.deleteService(namespace, name);
+    }
+
+     // ========== CONFIGMAPS ==========
+
+    @GetMapping("/namespaces/{namespace}/configmaps")
+    public java.util.List<ConfigMap> getConfigMaps(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        return kubernetesService.listConfigMaps(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/configmaps/{name}")
+    public ConfigMap getConfigMap(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        ConfigMap cm = kubernetesService.getConfigMap(namespace, name);
+        if (cm == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "ConfigMap not found: " + name
+            );
+        }
+        return cm;
+    }
+
+    @PostMapping("/namespaces/{namespace}/configmaps")
+    public ConfigMap createOrUpdateConfigMap(
+            @PathVariable String namespace,
+            @RequestBody ConfigMap configMap,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update configmaps"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdateConfigMap(namespace, configMap);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/configmaps/{name}")
+    public void deleteConfigMap(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete configmaps"
+            );
+        }
+
+        kubernetesService.deleteConfigMap(namespace, name);
+    }
+
+    // ========== SECRETS ==========
+
+    @GetMapping("/namespaces/{namespace}/secrets")
+    public java.util.List<Secret> getSecrets(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can list secrets"
+            );
+        }
+
+        return kubernetesService.listSecrets(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/secrets/{name}")
+    public Secret getSecret(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can get secrets"
+            );
+        }
+
+        Secret secret = kubernetesService.getSecret(namespace, name);
+        if (secret == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Secret not found: " + name
+            );
+        }
+        return secret;
+    }
+
+    @PostMapping("/namespaces/{namespace}/secrets")
+    public Secret createOrUpdateSecret(
+            @PathVariable String namespace,
+            @RequestBody Secret secret,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update secrets"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdateSecret(namespace, secret);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/secrets/{name}")
+    public void deleteSecret(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete secrets"
+            );
+        }
+
+        kubernetesService.deleteSecret(namespace, name);
     }
 
     // ========== Helper ==========
