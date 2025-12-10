@@ -11,6 +11,14 @@ import io.fabric8.kubernetes.api.model.apps.ReplicaSet;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.apps.DaemonSet;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
+import io.fabric8.kubernetes.api.model.ServiceAccount;
+import io.fabric8.kubernetes.api.model.ResourceQuota;
+import io.fabric8.kubernetes.api.model.LimitRange;
+import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
+import io.fabric8.kubernetes.api.model.networking.v1.NetworkPolicy;
+import io.fabric8.kubernetes.api.model.autoscaling.v2.HorizontalPodAutoscaler;
+import io.fabric8.kubernetes.api.model.policy.v1.PodDisruptionBudget;
+
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.springframework.stereotype.Service;
 
@@ -538,6 +546,331 @@ public class KubernetesService {
 
     public void deletePersistentVolumeClaim(String namespace, String name) {
         client.persistentVolumeClaims()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+
+        // ========== INGRESS ==========
+
+    public java.util.List<Ingress> listIngresses(String namespace) {
+        return client.network()
+                .v1()
+                .ingresses()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public Ingress getIngress(String namespace, String name) {
+        return client.network()
+                .v1()
+                .ingresses()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public Ingress createOrUpdateIngress(String namespace, Ingress ingress) {
+        if (ingress.getMetadata() != null) {
+            String bodyNs = ingress.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                ingress.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "Ingress namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.network()
+                .v1()
+                .ingresses()
+                .inNamespace(namespace)
+                .resource(ingress)
+                .createOrReplace();
+    }
+
+    public void deleteIngress(String namespace, String name) {
+        client.network()
+                .v1()
+                .ingresses()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+
+        // ========== SERVICEACCOUNTS ==========
+
+    public java.util.List<ServiceAccount> listServiceAccounts(String namespace) {
+        return client.serviceAccounts()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public ServiceAccount getServiceAccount(String namespace, String name) {
+        return client.serviceAccounts()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public ServiceAccount createOrUpdateServiceAccount(String namespace, ServiceAccount sa) {
+        if (sa.getMetadata() != null) {
+            String bodyNs = sa.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                sa.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "ServiceAccount namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.serviceAccounts()
+                .inNamespace(namespace)
+                .resource(sa)
+                .createOrReplace();
+    }
+
+    public void deleteServiceAccount(String namespace, String name) {
+        client.serviceAccounts()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+
+        // ========== HORIZONTAL POD AUTOSCALERS (HPA) ==========
+
+    public java.util.List<HorizontalPodAutoscaler> listHorizontalPodAutoscalers(String namespace) {
+        return client.autoscaling()
+                .v2()
+                .horizontalPodAutoscalers()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public HorizontalPodAutoscaler getHorizontalPodAutoscaler(String namespace, String name) {
+        return client.autoscaling()
+                .v2()
+                .horizontalPodAutoscalers()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public HorizontalPodAutoscaler createOrUpdateHorizontalPodAutoscaler(
+            String namespace,
+            HorizontalPodAutoscaler hpa
+    ) {
+        if (hpa.getMetadata() != null) {
+            String bodyNs = hpa.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                hpa.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "HPA namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.autoscaling()
+                .v2()
+                .horizontalPodAutoscalers()
+                .inNamespace(namespace)
+                .resource(hpa)
+                .createOrReplace();
+    }
+
+    public void deleteHorizontalPodAutoscaler(String namespace, String name) {
+        client.autoscaling()
+                .v2()
+                .horizontalPodAutoscalers()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+
+        // ========== NETWORKPOLICIES ==========
+
+    public java.util.List<NetworkPolicy> listNetworkPolicies(String namespace) {
+        return client.network()
+                .v1()
+                .networkPolicies()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public NetworkPolicy getNetworkPolicy(String namespace, String name) {
+        return client.network()
+                .v1()
+                .networkPolicies()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public NetworkPolicy createOrUpdateNetworkPolicy(String namespace, NetworkPolicy np) {
+        if (np.getMetadata() != null) {
+            String bodyNs = np.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                np.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "NetworkPolicy namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.network()
+                .v1()
+                .networkPolicies()
+                .inNamespace(namespace)
+                .resource(np)
+                .createOrReplace();
+    }
+
+    public void deleteNetworkPolicy(String namespace, String name) {
+        client.network()
+                .v1()
+                .networkPolicies()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+
+        // ========== POD DISRUPTION BUDGETS (PDB) ==========
+
+    public java.util.List<PodDisruptionBudget> listPodDisruptionBudgets(String namespace) {
+        return client.policy()
+                .v1()
+                .podDisruptionBudget()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public PodDisruptionBudget getPodDisruptionBudget(String namespace, String name) {
+        return client.policy()
+                .v1()
+                .podDisruptionBudget()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public PodDisruptionBudget createOrUpdatePodDisruptionBudget(
+            String namespace,
+            PodDisruptionBudget pdb
+    ) {
+        if (pdb.getMetadata() != null) {
+            String bodyNs = pdb.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                pdb.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "PDB namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.policy()
+                .v1()
+                .podDisruptionBudget()
+                .inNamespace(namespace)
+                .resource(pdb)
+                .createOrReplace();
+    }
+
+    public void deletePodDisruptionBudget(String namespace, String name) {
+        client.policy()
+                .v1()
+                .podDisruptionBudget()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+
+        // ========== RESOURCE QUOTAS ==========
+
+    public java.util.List<ResourceQuota> listResourceQuotas(String namespace) {
+        return client.resourceQuotas()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public ResourceQuota getResourceQuota(String namespace, String name) {
+        return client.resourceQuotas()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public ResourceQuota createOrUpdateResourceQuota(String namespace, ResourceQuota rq) {
+        if (rq.getMetadata() != null) {
+            String bodyNs = rq.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                rq.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "ResourceQuota namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.resourceQuotas()
+                .inNamespace(namespace)
+                .resource(rq)
+                .createOrReplace();
+    }
+
+    public void deleteResourceQuota(String namespace, String name) {
+        client.resourceQuotas()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+
+        // ========== LIMIT RANGES ==========
+
+    public java.util.List<LimitRange> listLimitRanges(String namespace) {
+        return client.limitRanges()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public LimitRange getLimitRange(String namespace, String name) {
+        return client.limitRanges()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public LimitRange createOrUpdateLimitRange(String namespace, LimitRange lr) {
+        if (lr.getMetadata() != null) {
+            String bodyNs = lr.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                lr.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "LimitRange namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.limitRanges()
+                .inNamespace(namespace)
+                .resource(lr)
+                .createOrReplace();
+    }
+
+    public void deleteLimitRange(String namespace, String name) {
+        client.limitRanges()
                 .inNamespace(namespace)
                 .withName(name)
                 .delete();

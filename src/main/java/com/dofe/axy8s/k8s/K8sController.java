@@ -2,6 +2,7 @@ package com.dofe.axy8s.k8s;
 
 import com.dofe.axy8s.security.AppUserDetails;
 import com.dofe.axy8s.user.Role;
+
 import io.fabric8.kubernetes.api.model.Namespace;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
@@ -14,6 +15,14 @@ import io.fabric8.kubernetes.api.model.apps.ReplicaSet;
 import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.api.model.apps.DaemonSet;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaim;
+import io.fabric8.kubernetes.api.model.ServiceAccount;
+import io.fabric8.kubernetes.api.model.ResourceQuota;
+import io.fabric8.kubernetes.api.model.LimitRange;
+import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
+import io.fabric8.kubernetes.api.model.networking.v1.NetworkPolicy;
+import io.fabric8.kubernetes.api.model.autoscaling.v2.HorizontalPodAutoscaler;
+import io.fabric8.kubernetes.api.model.policy.v1.PodDisruptionBudget;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -865,6 +874,518 @@ public class K8sController {
         kubernetesService.deletePersistentVolumeClaim(namespace, name);
     }
 
+        // ========== INGRESS ==========
+
+    @GetMapping("/namespaces/{namespace}/ingresses")
+    public java.util.List<Ingress> getIngresses(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        return kubernetesService.listIngresses(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/ingresses/{name}")
+    public Ingress getIngress(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        Ingress ing = kubernetesService.getIngress(namespace, name);
+        if (ing == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Ingress not found: " + name
+            );
+        }
+        return ing;
+    }
+
+    @PostMapping("/namespaces/{namespace}/ingresses")
+    public Ingress createOrUpdateIngress(
+            @PathVariable String namespace,
+            @RequestBody Ingress ingress,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update ingresses"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdateIngress(namespace, ingress);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/ingresses/{name}")
+    public void deleteIngress(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete ingresses"
+            );
+        }
+
+        kubernetesService.deleteIngress(namespace, name);
+    }
+
+        // ========== SERVICEACCOUNTS ==========
+
+    @GetMapping("/namespaces/{namespace}/serviceaccounts")
+    public java.util.List<ServiceAccount> getServiceAccounts(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        return kubernetesService.listServiceAccounts(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/serviceaccounts/{name}")
+    public ServiceAccount getServiceAccount(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        ServiceAccount sa = kubernetesService.getServiceAccount(namespace, name);
+        if (sa == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "ServiceAccount not found: " + name
+            );
+        }
+        return sa;
+    }
+
+    @PostMapping("/namespaces/{namespace}/serviceaccounts")
+    public ServiceAccount createOrUpdateServiceAccount(
+            @PathVariable String namespace,
+            @RequestBody ServiceAccount sa,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update serviceaccounts"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdateServiceAccount(namespace, sa);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/serviceaccounts/{name}")
+    public void deleteServiceAccount(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete serviceaccounts"
+            );
+        }
+
+        kubernetesService.deleteServiceAccount(namespace, name);
+    }
+
+        // ========== HPA ==========
+
+    @GetMapping("/namespaces/{namespace}/hpas")
+    public java.util.List<HorizontalPodAutoscaler> getHorizontalPodAutoscalers(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        return kubernetesService.listHorizontalPodAutoscalers(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/hpas/{name}")
+    public HorizontalPodAutoscaler getHorizontalPodAutoscaler(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        HorizontalPodAutoscaler hpa = kubernetesService.getHorizontalPodAutoscaler(namespace, name);
+        if (hpa == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "HPA not found: " + name
+            );
+        }
+        return hpa;
+    }
+
+    @PostMapping("/namespaces/{namespace}/hpas")
+    public HorizontalPodAutoscaler createOrUpdateHorizontalPodAutoscaler(
+            @PathVariable String namespace,
+            @RequestBody HorizontalPodAutoscaler hpa,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update hpas"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdateHorizontalPodAutoscaler(namespace, hpa);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/hpas/{name}")
+    public void deleteHorizontalPodAutoscaler(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete hpas"
+            );
+        }
+
+        kubernetesService.deleteHorizontalPodAutoscaler(namespace, name);
+    }
+
+        // ========== NETWORKPOLICIES ==========
+
+    @GetMapping("/namespaces/{namespace}/networkpolicies")
+    public java.util.List<NetworkPolicy> getNetworkPolicies(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        return kubernetesService.listNetworkPolicies(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/networkpolicies/{name}")
+    public NetworkPolicy getNetworkPolicy(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        NetworkPolicy np = kubernetesService.getNetworkPolicy(namespace, name);
+        if (np == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "NetworkPolicy not found: " + name
+            );
+        }
+        return np;
+    }
+
+    @PostMapping("/namespaces/{namespace}/networkpolicies")
+    public NetworkPolicy createOrUpdateNetworkPolicy(
+            @PathVariable String namespace,
+            @RequestBody NetworkPolicy np,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update networkpolicies"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdateNetworkPolicy(namespace, np);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/networkpolicies/{name}")
+    public void deleteNetworkPolicy(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete networkpolicies"
+            );
+        }
+
+        kubernetesService.deleteNetworkPolicy(namespace, name);
+    }
+
+        // ========== POD DISRUPTION BUDGETS (PDB) ==========
+
+    @GetMapping("/namespaces/{namespace}/poddisruptionbudgets")
+    public java.util.List<PodDisruptionBudget> getPodDisruptionBudgets(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        return kubernetesService.listPodDisruptionBudgets(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/poddisruptionbudgets/{name}")
+    public PodDisruptionBudget getPodDisruptionBudget(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        PodDisruptionBudget pdb = kubernetesService.getPodDisruptionBudget(namespace, name);
+        if (pdb == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "PDB not found: " + name
+            );
+        }
+        return pdb;
+    }
+
+    @PostMapping("/namespaces/{namespace}/poddisruptionbudgets")
+    public PodDisruptionBudget createOrUpdatePodDisruptionBudget(
+            @PathVariable String namespace,
+            @RequestBody PodDisruptionBudget pdb,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update pdbs"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdatePodDisruptionBudget(namespace, pdb);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/poddisruptionbudgets/{name}")
+    public void deletePodDisruptionBudget(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete pdbs"
+            );
+        }
+
+        kubernetesService.deletePodDisruptionBudget(namespace, name);
+    }
+
+        // ========== RESOURCE QUOTAS ==========
+
+    @GetMapping("/namespaces/{namespace}/resourcequotas")
+    public java.util.List<ResourceQuota> getResourceQuotas(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        return kubernetesService.listResourceQuotas(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/resourcequotas/{name}")
+    public ResourceQuota getResourceQuota(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        ResourceQuota rq = kubernetesService.getResourceQuota(namespace, name);
+        if (rq == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "ResourceQuota not found: " + name
+            );
+        }
+        return rq;
+    }
+
+    @PostMapping("/namespaces/{namespace}/resourcequotas")
+    public ResourceQuota createOrUpdateResourceQuota(
+            @PathVariable String namespace,
+            @RequestBody ResourceQuota rq,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update resourcequotas"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdateResourceQuota(namespace, rq);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/resourcequotas/{name}")
+    public void deleteResourceQuota(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete resourcequotas"
+            );
+        }
+
+        kubernetesService.deleteResourceQuota(namespace, name);
+    }
+
+        // ========== LIMIT RANGES ==========
+
+    @GetMapping("/namespaces/{namespace}/limitranges")
+    public java.util.List<LimitRange> getLimitRanges(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        return kubernetesService.listLimitRanges(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/limitranges/{name}")
+    public LimitRange getLimitRange(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        LimitRange lr = kubernetesService.getLimitRange(namespace, name);
+        if (lr == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "LimitRange not found: " + name
+            );
+        }
+        return lr;
+    }
+
+    @PostMapping("/namespaces/{namespace}/limitranges")
+    public LimitRange createOrUpdateLimitRange(
+            @PathVariable String namespace,
+            @RequestBody LimitRange lr,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update limitranges"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdateLimitRange(namespace, lr);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/limitranges/{name}")
+    public void deleteLimitRange(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete limitranges"
+            );
+        }
+
+        kubernetesService.deleteLimitRange(namespace, name);
+    }
+
+    
 
     // ========== Helper ==========
 
