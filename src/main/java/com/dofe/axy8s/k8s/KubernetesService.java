@@ -20,48 +20,75 @@ public class KubernetesService {
         this.client = client;
     }
 
+    // ========== NAMESPACES ==========
+
     public List<Namespace> listNamespaces() {
-        return client.namespaces().list().getItems();
+        return client.namespaces()
+                .list()
+                .getItems();
     }
+
+    // ========== PODS & LOGS ==========
 
     public List<Pod> listPods(String namespace) {
-        return client.pods().inNamespace(namespace).list().getItems();
+        return client.pods()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
     }
 
-    public String getPodLogs(String namespace, String podName, String container) {
-        if (container != null && !container.isEmpty()) {
+    public String getPodLogs(String namespace, String podName, String containerName) {
+        if (containerName != null && !containerName.isBlank()) {
             return client.pods()
                     .inNamespace(namespace)
                     .withName(podName)
-                    .inContainer(container)
+                    .inContainer(containerName)
                     .getLog();
-        } else {
+        }
+
         return client.pods()
                 .inNamespace(namespace)
                 .withName(podName)
                 .getLog();
     }
 
-    // ====== DEPLOYMENTS (đã có, nhắc lại để đầy đủ) ======
+    public void deletePod(String namespace, String podName) {
+        client.pods()
+                .inNamespace(namespace)
+                .withName(podName)
+                .delete();
+    }
+
+    // ========== DEPLOYMENTS ==========
 
     public List<Deployment> listDeployments(String namespace) {
-        return client.apps().deployments().inNamespace(namespace).list().getItems();
+        return client.apps()
+                .deployments()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
     }
 
     public Deployment getDeployment(String namespace, String name) {
-        return client.apps().deployments().inNamespace(namespace).withName(name).get();
+        return client.apps()
+                .deployments()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
     }
 
     public Deployment createOrUpdateDeployment(String namespace, Deployment deployment) {
         if (deployment.getMetadata() != null) {
-            if (deployment.getMetadata().getNamespace() == null ||
-                deployment.getMetadata().getNamespace().isBlank()) {
+            String bodyNs = deployment.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
                 deployment.getMetadata().setNamespace(namespace);
-            } else if (!deployment.getMetadata().getNamespace().equals(namespace)) {
+            } else if (!bodyNs.equals(namespace)) {
                 throw new IllegalArgumentException(
-                        "Deployment namespace in body does not match path namespace");
+                        "Deployment namespace in body does not match path namespace"
+                );
             }
         }
+
         return client.apps()
                 .deployments()
                 .inNamespace(namespace)
@@ -77,17 +104,6 @@ public class KubernetesService {
                 .delete();
     }
 
-    // ====== NEW: delete pod ======
-
-    public void deletePod(String namespace, String podName) {
-        client.pods()
-                .inNamespace(namespace)
-                .withName(podName)
-                .delete();
-    }
-
-    // ====== NEW: restart deployment (rollout restart) ======
-
     public void restartDeployment(String namespace, String name) {
         Deployment deployment = client.apps()
                 .deployments()
@@ -99,6 +115,7 @@ public class KubernetesService {
             throw new IllegalArgumentException("Deployment not found: " + name);
         }
 
+        // Giống kubectl rollout restart: update annotation để trigger rollout
         var templateMeta = deployment.getSpec().getTemplate().getMetadata();
         if (templateMeta.getAnnotations() == null) {
             templateMeta.setAnnotations(new HashMap<>());
