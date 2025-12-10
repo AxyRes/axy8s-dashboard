@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: axy8s-backend-api
-          image: nexus.trainingdevsecops.com/dofe/lamnhattien/axy8s-backend:1.0.0-patch
+          image: nexus.trainingdevsecops.com/dofe/axy8s/axy8s-backend:1.0.0-patch
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
