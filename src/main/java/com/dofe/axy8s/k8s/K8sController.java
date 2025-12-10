@@ -182,6 +182,79 @@ public class K8sController {
         }
     }
 
+    // ========== SERVICES ==========
+
+    @GetMapping("/namespaces/{namespace}/services")
+    public List<Service> getServices(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        return kubernetesService.listServices(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/services/{name}")
+    public Service getService(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        Service service = kubernetesService.getService(namespace, name);
+        if (service == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Service not found: " + name
+            );
+        }
+        return service;
+    }
+
+    @PostMapping("/namespaces/{namespace}/services")
+    public Service createOrUpdateService(
+            @PathVariable String namespace,
+            @RequestBody Service service,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update services"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdateService(namespace, service);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/services/{name}")
+    public void deleteService(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete services"
+            );
+        }
+
+        kubernetesService.deleteService(namespace, name);
+    }
+
     // ========== Helper ==========
 
     private void ensureNamespaceAccess(AppUserDetails user, String namespace) {

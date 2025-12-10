@@ -129,4 +129,50 @@ public class KubernetesService {
                 .withName(name)
                 .patch(deployment);
     }
+
+    // ========== SERVICES ==========
+
+    // Lưu ý: dùng FQN io.fabric8...Service để không trùng với @Service của Spring
+
+    public List<io.fabric8.kubernetes.api.model.Service> listServices(String namespace) {
+        return client.services()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public io.fabric8.kubernetes.api.model.Service getService(String namespace, String name) {
+        return client.services()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public io.fabric8.kubernetes.api.model.Service createOrUpdateService(
+            String namespace,
+            io.fabric8.kubernetes.api.model.Service service
+    ) {
+        if (service.getMetadata() != null) {
+            String bodyNs = service.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                service.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "Service namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.services()
+                .inNamespace(namespace)
+                .resource(service)
+                .createOrReplace();
+    }
+
+    public void deleteService(String namespace, String name) {
+        client.services()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
 }
