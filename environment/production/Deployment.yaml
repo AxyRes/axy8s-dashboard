@@ -12,6 +12,7 @@ spec:
       labels:
         app: axy8s-backend-api
     spec:
+      serviceAccountName: axy8s-admin-sa
       containers:
         - name: axy8s-backend-api
           image: nexus.trainingdevsecops.com/dofe/axy8s/axy8s-backend:1.0.0-patch
