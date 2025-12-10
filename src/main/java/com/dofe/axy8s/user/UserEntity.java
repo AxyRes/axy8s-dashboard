@@ -30,22 +30,15 @@ public class UserEntity {
      * Danh sách namespace được phép, dạng:
      *   "*"
      *   "ns1,ns2,ns3"
-     *
-     * Rule (áp dụng cho NON-SUPER):
-     *  - Nếu allowedNamespaces rỗng/null -> không được vào gì hết
-     *  - Nếu allowedNamespaces = "*" -> được vào tất cả namespace TRỪ "default"
-     *  - Nếu là list "ns1,ns2" -> chỉ được vào ns nằm trong list
-     *  - "default" bị chặn, trừ khi sau này policy thay đổi.
-     *
-     * SUPER_ADMIN: bỏ qua rule này, vào được tất cả, kể cả "default".
      */
     private String allowedNamespaces;
 
     private boolean active;
 
     /**
-     * Đánh dấu user hệ thống, ví dụ SUPER_ADMIN khởi tạo.
-     * Có thể dùng để chặn xoá / sửa quyền sau này.
+     * Đánh dấu user hệ thống (SUPER_ADMIN khởi tạo).
+     * Đổi tên cột để tránh đụng keyword SYSTEM_USER của H2.
      */
+    @Column(name = "system_user_flag", nullable = false)
     private boolean systemUser;
 }
