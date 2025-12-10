@@ -77,6 +77,8 @@ spec:
           ports:
             - containerPort: 5432
           env:
+            - name: UI_ENABLED
+              value: "true"
             - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:

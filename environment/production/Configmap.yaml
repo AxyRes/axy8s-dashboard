@@ -25,5 +25,8 @@ data:
       file:
         name: ${LOG_FILE:/var/log/axy8s-backend-api/app.log}
 
+    ui:
+      enabled: ${UI_ENABLED:false}
+
     server:
       port: ${SERVER_PORT:8080}
