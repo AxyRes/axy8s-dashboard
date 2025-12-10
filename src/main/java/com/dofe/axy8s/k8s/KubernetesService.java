@@ -5,6 +5,8 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.api.model.batch.v1.CronJob;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.springframework.stereotype.Service;
 
@@ -218,7 +220,7 @@ public class KubernetesService {
                 .withName(name)
                 .delete();
     }
-    
+
     // ========== SECRETS ==========
 
     public java.util.List<Secret> listSecrets(String namespace) {
@@ -255,6 +257,104 @@ public class KubernetesService {
 
     public void deleteSecret(String namespace, String name) {
         client.secrets()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+
+        // ========== CRONJOBS ==========
+
+    public java.util.List<CronJob> listCronJobs(String namespace) {
+        return client.batch()
+                .v1()
+                .cronjobs()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public CronJob getCronJob(String namespace, String name) {
+        return client.batch()
+                .v1()
+                .cronjobs()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public CronJob createOrUpdateCronJob(String namespace, CronJob cronJob) {
+        if (cronJob.getMetadata() != null) {
+            String bodyNs = cronJob.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                cronJob.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "CronJob namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.batch()
+                .v1()
+                .cronjobs()
+                .inNamespace(namespace)
+                .resource(cronJob)
+                .createOrReplace();
+    }
+
+    public void deleteCronJob(String namespace, String name) {
+        client.batch()
+                .v1()
+                .cronjobs()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+
+     // ========== JOBS ==========
+
+    public java.util.List<Job> listJobs(String namespace) {
+        return client.batch()
+                .v1()
+                .jobs()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public Job getJob(String namespace, String name) {
+        return client.batch()
+                .v1()
+                .jobs()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public Job createOrUpdateJob(String namespace, Job job) {
+        if (job.getMetadata() != null) {
+            String bodyNs = job.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                job.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "Job namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.batch()
+                .v1()
+                .jobs()
+                .inNamespace(namespace)
+                .resource(job)
+                .createOrReplace();
+    }
+
+    public void deleteJob(String namespace, String name) {
+        client.batch()
+                .v1()
+                .jobs()
                 .inNamespace(namespace)
                 .withName(name)
                 .delete();

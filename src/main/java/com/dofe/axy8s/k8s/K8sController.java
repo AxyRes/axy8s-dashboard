@@ -8,6 +8,8 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import io.fabric8.kubernetes.api.model.batch.v1.CronJob;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -417,6 +419,154 @@ public class K8sController {
         }
 
         kubernetesService.deleteSecret(namespace, name);
+    }
+
+    // ========== CRONJOBS ==========
+
+    @GetMapping("/namespaces/{namespace}/cronjobs")
+    public java.util.List<CronJob> getCronJobs(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        // Cho mọi role có quyền namespace đều xem được
+        return kubernetesService.listCronJobs(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/cronjobs/{name}")
+    public CronJob getCronJob(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        CronJob cronJob = kubernetesService.getCronJob(namespace, name);
+        if (cronJob == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "CronJob not found: " + name
+            );
+        }
+        return cronJob;
+    }
+
+    @PostMapping("/namespaces/{namespace}/cronjobs")
+    public CronJob createOrUpdateCronJob(
+            @PathVariable String namespace,
+            @RequestBody CronJob cronJob,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        // CRUD CronJob: chỉ ADMIN + SUPER_ADMIN
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update cronjobs"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdateCronJob(namespace, cronJob);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/cronjobs/{name}")
+    public void deleteCronJob(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete cronjobs"
+            );
+        }
+
+        kubernetesService.deleteCronJob(namespace, name);
+    }
+
+     // ========== JOBS ==========
+
+    @GetMapping("/namespaces/{namespace}/jobs")
+    public java.util.List<Job> getJobs(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        return kubernetesService.listJobs(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/jobs/{name}")
+    public Job getJob(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        Job job = kubernetesService.getJob(namespace, name);
+        if (job == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Job not found: " + name
+            );
+        }
+        return job;
+    }
+
+    @PostMapping("/namespaces/{namespace}/jobs")
+    public Job createOrUpdateJob(
+            @PathVariable String namespace,
+            @RequestBody Job job,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update jobs"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdateJob(namespace, job);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/jobs/{name}")
+    public void deleteJob(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete jobs"
+            );
+        }
+
+        kubernetesService.deleteJob(namespace, name);
     }
 
     // ========== Helper ==========
