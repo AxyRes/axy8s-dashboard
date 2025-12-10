@@ -7,6 +7,8 @@ import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.CronJob;
+import io.fabric8.kubernetes.api.model.apps.ReplicaSet;
+import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.springframework.stereotype.Service;
 
@@ -355,6 +357,96 @@ public class KubernetesService {
         client.batch()
                 .v1()
                 .jobs()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+
+    // ========== REPLICASETS ==========
+
+    public java.util.List<ReplicaSet> listReplicaSets(String namespace) {
+        return client.apps()
+                .replicaSets()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public ReplicaSet getReplicaSet(String namespace, String name) {
+        return client.apps()
+                .replicaSets()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public ReplicaSet createOrUpdateReplicaSet(String namespace, ReplicaSet replicaSet) {
+        if (replicaSet.getMetadata() != null) {
+            String bodyNs = replicaSet.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                replicaSet.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "ReplicaSet namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.apps()
+                .replicaSets()
+                .inNamespace(namespace)
+                .resource(replicaSet)
+                .createOrReplace();
+    }
+
+    public void deleteReplicaSet(String namespace, String name) {
+        client.apps()
+                .replicaSets()
+                .inNamespace(namespace)
+                .withName(name)
+                .delete();
+    }
+
+    // ========== STATEFULSETS ==========
+
+    public java.util.List<StatefulSet> listStatefulSets(String namespace) {
+        return client.apps()
+                .statefulSets()
+                .inNamespace(namespace)
+                .list()
+                .getItems();
+    }
+
+    public StatefulSet getStatefulSet(String namespace, String name) {
+        return client.apps()
+                .statefulSets()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
+    public StatefulSet createOrUpdateStatefulSet(String namespace, StatefulSet statefulSet) {
+        if (statefulSet.getMetadata() != null) {
+            String bodyNs = statefulSet.getMetadata().getNamespace();
+            if (bodyNs == null || bodyNs.isBlank()) {
+                statefulSet.getMetadata().setNamespace(namespace);
+            } else if (!bodyNs.equals(namespace)) {
+                throw new IllegalArgumentException(
+                        "StatefulSet namespace in body does not match path namespace"
+                );
+            }
+        }
+
+        return client.apps()
+                .statefulSets()
+                .inNamespace(namespace)
+                .resource(statefulSet)
+                .createOrReplace();
+    }
+
+    public void deleteStatefulSet(String namespace, String name) {
+        client.apps()
+                .statefulSets()
                 .inNamespace(namespace)
                 .withName(name)
                 .delete();

@@ -10,6 +10,8 @@ import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.Secret;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.CronJob;
+import io.fabric8.kubernetes.api.model.apps.ReplicaSet;
+import io.fabric8.kubernetes.api.model.apps.StatefulSet;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -568,6 +570,153 @@ public class K8sController {
 
         kubernetesService.deleteJob(namespace, name);
     }
+
+    // ========== REPLICASETS ==========
+
+    @GetMapping("/namespaces/{namespace}/replicasets")
+    public java.util.List<ReplicaSet> getReplicaSets(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        return kubernetesService.listReplicaSets(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/replicasets/{name}")
+    public ReplicaSet getReplicaSet(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        ReplicaSet rs = kubernetesService.getReplicaSet(namespace, name);
+        if (rs == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "ReplicaSet not found: " + name
+            );
+        }
+        return rs;
+    }
+
+    @PostMapping("/namespaces/{namespace}/replicasets")
+    public ReplicaSet createOrUpdateReplicaSet(
+            @PathVariable String namespace,
+            @RequestBody ReplicaSet replicaSet,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update replicasets"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdateReplicaSet(namespace, replicaSet);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/replicasets/{name}")
+    public void deleteReplicaSet(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete replicasets"
+            );
+        }
+
+        kubernetesService.deleteReplicaSet(namespace, name);
+    }
+
+        // ========== STATEFULSETS ==========
+
+    @GetMapping("/namespaces/{namespace}/statefulsets")
+    public java.util.List<StatefulSet> getStatefulSets(
+            @PathVariable String namespace,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+        return kubernetesService.listStatefulSets(namespace);
+    }
+
+    @GetMapping("/namespaces/{namespace}/statefulsets/{name}")
+    public StatefulSet getStatefulSet(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        StatefulSet ss = kubernetesService.getStatefulSet(namespace, name);
+        if (ss == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "StatefulSet not found: " + name
+            );
+        }
+        return ss;
+    }
+
+    @PostMapping("/namespaces/{namespace}/statefulsets")
+    public StatefulSet createOrUpdateStatefulSet(
+            @PathVariable String namespace,
+            @RequestBody StatefulSet statefulSet,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can create or update statefulsets"
+            );
+        }
+
+        try {
+            return kubernetesService.createOrUpdateStatefulSet(namespace, statefulSet);
+        } catch (IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        }
+    }
+
+    @DeleteMapping("/namespaces/{namespace}/statefulsets/{name}")
+    public void deleteStatefulSet(
+            @PathVariable String namespace,
+            @PathVariable String name,
+            Authentication authentication
+    ) {
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
+        ensureNamespaceAccess(user, namespace);
+
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can delete statefulsets"
+            );
+        }
+
+        kubernetesService.deleteStatefulSet(namespace, name);
+    }
+
 
     // ========== Helper ==========
 
