@@ -2,7 +2,7 @@ FROM registry.access.redhat.com/ubi9/openjdk-21-runtime:latest
 
 WORKDIR /opt/app
 
-COPY target/*.jar app.jar
+COPY target/*.jar axy8s.jar
 
 USER root
 RUN useradd -r -u 1001 axyuser && \
@@ -14,4 +14,4 @@ EXPOSE 8080
 
 ENV JAVA_OPTS=""
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /opt/app/app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /opt/app/axy8s.jar"]

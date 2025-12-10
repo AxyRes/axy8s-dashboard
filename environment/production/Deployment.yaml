@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: axy8s-backend-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: axy8s-backend-api
+  template:
+    metadata:
+      labels:
+        app: axy8s-backend-api
+    spec:
+      containers:
+        - name: axy8s-backend-api
+          image: nexus.trainingdevsecops.com/dofe/lamnhattien/axy8s-backend:1.0.0-patch
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - secretRef:
+                name: axy8s-backend-api-secret
+          env:
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: APP_LOG_LEVEL
+              value: "DEBUG"
+            - name: SERVER_PORT
+              value: "8080"
+          volumeMounts:
+            - name: config-volume
+              mountPath: /config/application.yml
+              subPath: application.yml
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: config-volume
+          configMap:
+            name: axy8s-backend-api-config
+            items:
+              - key: application.yml
+                path: application.yml
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-axy8s
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-axy8s
+  template:
+    metadata:
+      labels:
+        app: postgres-axy8s
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: axy8s-backend-secret
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: axy8s-backend-secret
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: axy8s-backend-secret
+                  key: POSTGRES_PASSWORD
+          envFrom:
+            - secretRef:
+                name: axy8s-backend-secret
+

@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: axy8s-backend-api-config
+data:
+  application.yml: |
+    spring:
+      datasource:
+        url: ${DB_URL}
+        username: ${DB_USERNAME}
+        password: ${DB_PASSWORD}
+        driver-class-name: org.postgresql.Driver
+
+      jpa:
+        hibernate:
+          ddl-auto: update
+        properties:
+          hibernate:
+            dialect: org.hibernate.dialect.PostgreSQLDialect
+
+    logging:
+      level:
+        root: ${LOG_LEVEL:INFO}
+        com.dofe.axy8s: ${APP_LOG_LEVEL:DEBUG}
+      file:
+        name: ${LOG_FILE:/var/log/axy8s-backend-api/app.log}
+
+    server:
+      port: ${SERVER_PORT:8080}

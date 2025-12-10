@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: axy8s-backend-api-service
+spec:
+  type: ClusterIP
+  selector:
+    app: axy8s-backend-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-axy8s-service
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres-axy8s
+  ports:
+    - name: tcp
+      port: 5432
+      targetPort: 5432

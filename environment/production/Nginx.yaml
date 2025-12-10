@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-axy8s-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-axy8s-backend
+  template:
+    metadata:
+      labels:
+        app: nginx-axy8s-backend
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:latest
+          ports:
+            - containerPort: 443
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d
+            - name: ssl-certs
+              mountPath: /etc/nginx/ssl
+          env:
+            - name: SSL_CERT_PATH
+              value: "/etc/nginx/ssl"
+          command: ["/bin/sh"]
+          args: 
+            - -c
+            - |
+              # Kiểm tra nếu certificate chưa tồn tại thì tạo mới
+              if [ ! -f /etc/nginx/ssl/tls.crt ]; then
+                echo "Creating self-signed certificate..."
+                openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                  -keyout /etc/nginx/ssl/tls.key \
+                  -out /etc/nginx/ssl/tls.crt \
+                  -subj "/C=US/ST=State/L=City/O=Organization/CN=nginx-axy8s-backend"
+              else
+                echo "Certificate already exists, skipping generation."
+              fi
+              # Start nginx
+              echo "Starting nginx..."
+              nginx -g 'daemon off;'
+      volumes:
+        - name: nginx-conf
+          configMap:
+            name: nginx-axy8s-backend-config
+        - name: ssl-certs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-axy8s-backend-config
+data:
+  default.conf: |
+    server {
+        listen 443 ssl;
+
+        # Sử dụng self-signed certificate
+        ssl_certificate     /etc/nginx/ssl/tls.crt;
+        ssl_certificate_key /etc/nginx/ssl/tls.key;
+
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+
+        location / {
+            proxy_pass http://axy8s-backend-api-service/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+        }
+
+        location /healthz {
+            access_log off;
+            return 200 "healthy\n";
+            add_header Content-Type text/plain;
+        }
+    }
+
+    server {
+        listen 80;
+        server_name _;
+        return 301 https://$host$request_uri;
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-axy8s-backend
+spec:
+  type: LoadBalancer
+  selector:
+    app: nginx-axy8s-backend
+  ports:
+    - port: 443
+      targetPort: 443
