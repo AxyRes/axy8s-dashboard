@@ -5,6 +5,7 @@ let currentUser = null;
 let currentNamespace = null;
 let currentSection = "workloads";
 let currentResource = "pods";
+let currentItems = []; // giữ raw data cho popup detail
 
 const RESOURCE_CONFIG = {
     workloads: {
@@ -69,7 +70,6 @@ const RESOURCE_CONFIG = {
         }
     },
     cluster: {
-        // các path cluster này anh kiểm tra lại với K8sClusterController của anh
         persistentvolumes: {
             label: "PersistentVolumes",
             scope: "cluster",
@@ -89,6 +89,13 @@ const RESOURCE_CONFIG = {
             label: "Nodes",
             scope: "cluster",
             path: () => `/k8s/cluster/nodes`
+        }
+    },
+    access: {
+        users: {
+            label: "Users",
+            scope: "cluster",
+            path: () => `/users` // anh map API user theo path này
         }
     }
 };
@@ -110,6 +117,13 @@ async function apiFetch(path, options = {}) {
     });
 
     if (!res.ok) {
+        // 404 -> coi như API chưa implement, không bắt login lại
+        if (res.status === 404) {
+            throw new Error("API cho resource này chưa được implement (404).");
+        }
+        if (res.status === 401 || res.status === 403) {
+            throw new Error("Phiên đăng nhập hết hạn hoặc không đủ quyền.");
+        }
         const text = await res.text();
         throw new Error(text || res.statusText);
     }
@@ -121,7 +135,8 @@ async function apiFetch(path, options = {}) {
     return res.text();
 }
 
-// Login
+/* LOGIN */
+
 function initLogin() {
     const form = $("login-form");
     const errorBox = $("login-error");
@@ -151,12 +166,16 @@ function initLogin() {
                 role: data.role
             };
 
-            // cập nhật UI
             $("login-screen").classList.add("hidden");
             $("dashboard-shell").classList.remove("hidden");
 
             $("user-chip-name").textContent = currentUser.username;
             $("user-chip-role").textContent = currentUser.role;
+
+            // chỉ SUPER_ADMIN / ADMIN mới thấy menu Users
+            if (currentUser.role === "SUPER_ADMIN" || currentUser.role === "ADMIN") {
+                $("user-management-section").hidden = false;
+            }
 
             await loadNamespaces();
             activateDefaultNav();
@@ -167,7 +186,24 @@ function initLogin() {
     });
 }
 
-// Sidebar toggle
+/* LOGOUT */
+
+function initLogout() {
+    const btn = $("logout-btn");
+    btn.addEventListener("click", () => {
+        authToken = null;
+        currentUser = null;
+        currentNamespace = null;
+
+        $("dashboard-shell").classList.add("hidden");
+        $("login-screen").classList.remove("hidden");
+        $("login-form").reset();
+        $("login-error").hidden = true;
+    });
+}
+
+/* SIDEBAR */
+
 function initSidebarToggle() {
     const toggle = $("sidebar-toggle");
     const sidebar = $("sidebar");
@@ -177,7 +213,8 @@ function initSidebarToggle() {
     });
 }
 
-// Namespace select
+/* NAMESPACE */
+
 async function loadNamespaces() {
     const select = $("namespace-select");
     select.innerHTML = `<option disabled>Loading...</option>`;
@@ -206,14 +243,14 @@ async function loadNamespaces() {
             reloadCurrentResource();
         });
 
-        // load lần đầu
         await reloadCurrentResource();
     } catch (err) {
         console.error(err);
     }
 }
 
-// Nav click
+/* NAV */
+
 function initNav() {
     const items = document.querySelectorAll(".nav-item");
 
@@ -237,14 +274,124 @@ function activateDefaultNav() {
     }
 }
 
-function applyFilter(rows, keyword) {
-    if (!keyword) return rows;
-    const lower = keyword.toLowerCase();
-    return rows.filter(row => row.name.toLowerCase().includes(lower));
+/* FILTER */
+
+function initSearchFilter() {
+    const input = $("search-input");
+    input.addEventListener("input", () => {
+        reloadCurrentResource();
+    });
 }
 
-// Load resource table
+/* MODAL DETAIL */
+
+function initDetailModal() {
+    const modal = $("detail-modal");
+    const closeBtn = $("detail-close");
+    const backdrop = modal.querySelector(".modal-backdrop");
+
+    function close() {
+        modal.classList.add("hidden");
+    }
+
+    closeBtn.addEventListener("click", close);
+    backdrop.addEventListener("click", close);
+}
+
+function openDetailModal(title, item) {
+    const modal = $("detail-modal");
+    $("detail-title").textContent = title;
+    $("detail-json").textContent = JSON.stringify(item, null, 2);
+    modal.classList.remove("hidden");
+}
+
+/* USER MODAL */
+
+function initUserModal() {
+    const modal = $("user-modal");
+    const closeBtn = $("user-modal-close");
+    const backdrop = modal.querySelector(".modal-backdrop");
+    const form = $("user-form");
+    const errorBox = $("user-modal-error");
+
+    function close() {
+        modal.classList.add("hidden");
+        errorBox.hidden = true;
+        form.reset();
+        $("user-id").value = "";
+    }
+
+    closeBtn.addEventListener("click", close);
+    backdrop.addEventListener("click", close);
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        errorBox.hidden = true;
+
+        const id = $("user-id").value;
+        const username = $("user-username").value.trim();
+        const password = $("user-password").value;
+        const role = $("user-role").value;
+
+        if (!username) {
+            errorBox.textContent = "Username không được trống.";
+            errorBox.hidden = false;
+            return;
+        }
+
+        try {
+            const payload = { username, role };
+            if (password) {
+                payload.password = password;
+            }
+
+            if (id) {
+                await apiFetch(`/users/${id}`, {
+                    method: "PUT",
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                await apiFetch("/users", {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+            }
+
+            close();
+            await reloadUsers();
+        } catch (err) {
+            errorBox.textContent = "Lỗi khi lưu user: " + err.message;
+            errorBox.hidden = false;
+        }
+    });
+}
+
+function openUserModal(user) {
+    const modal = $("user-modal");
+    const title = $("user-modal-title");
+
+    if (user) {
+        title.textContent = `Update user: ${user.username}`;
+        $("user-id").value = user.id;
+        $("user-username").value = user.username;
+        $("user-role").value = (user.role || "USER");
+    } else {
+        title.textContent = "Create new user";
+        $("user-id").value = "";
+    }
+
+    $("user-modal-error").hidden = true;
+    modal.classList.remove("hidden");
+}
+
+/* LOAD RESOURCE TABLE */
+
 async function reloadCurrentResource() {
+    if (currentSection === "access" && currentResource === "users") {
+        await reloadUsers();
+        return;
+    }
+
     const configSection = RESOURCE_CONFIG[currentSection] || {};
     const cfg = configSection[currentResource];
 
@@ -261,6 +408,104 @@ async function reloadCurrentResource() {
 
     $("chip-scope").textContent = cfg.scope;
 
+    $("create-user-btn").hidden = true; // chỉ bật ở trang Users
+
+    const loading = $("loading-indicator");
+    const error = $("error-indicator");
+    const tbody = $("resource-table-body");
+    const summary = $("table-summary");
+
+    const thead = $("resource-table-head");
+    thead.innerHTML = `
+        <tr>
+            <th>Name</th>
+            <th>Namespace</th>
+            <th>Status</th>
+            <th>Age</th>
+        </tr>
+    `;
+
+    loading.hidden = false;
+    error.hidden = true;
+    tbody.innerHTML = "";
+    summary.textContent = "Loading...";
+
+    try {
+        const path = cfg.scope === "cluster" ? cfg.path() : cfg.path(currentNamespace);
+        const data = await apiFetch(path);
+
+        currentItems = data || [];
+
+        const keyword = $("search-input").value.toLowerCase();
+        let visibleCount = 0;
+
+        currentItems.forEach((item, index) => {
+            const meta = item.metadata || {};
+            const status = item.status || {};
+            const row = {
+                name: meta.name || "",
+                namespace: meta.namespace || "",
+                status: status.phase || status.status || status.type || "",
+                age: meta.creationTimestamp || ""
+            };
+
+            if (keyword && !row.name.toLowerCase().includes(keyword)) {
+                return;
+            }
+
+            const tr = document.createElement("tr");
+            tr.dataset.index = String(index);
+            tr.innerHTML = `
+                <td>${row.name}</td>
+                <td>${row.namespace}</td>
+                <td>${row.status}</td>
+                <td>${row.age}</td>
+            `;
+            tbody.appendChild(tr);
+            visibleCount++;
+        });
+
+        summary.textContent = `${visibleCount} items`;
+
+        // click -> detail modal
+        tbody.querySelectorAll("tr").forEach(tr => {
+            tr.addEventListener("click", () => {
+                const idx = Number(tr.dataset.index || "0");
+                const item = currentItems[idx];
+                const cfgSection = RESOURCE_CONFIG[currentSection][currentResource];
+                const title = `${cfgSection.label} · ${(item.metadata && item.metadata.name) || ""}`;
+                openDetailModal(title, item);
+            });
+        });
+
+    } catch (err) {
+        console.error(err);
+        error.textContent = err.message;
+        error.hidden = false;
+    } finally {
+        loading.hidden = true;
+    }
+}
+
+/* USERS PAGE */
+
+async function reloadUsers() {
+    $("resource-title").textContent = "Users";
+    $("resource-subtitle").textContent = "Quản lý user. Chỉ SUPER_ADMIN / ADMIN mới vào được trang này.";
+    $("chip-scope").textContent = "cluster";
+
+    const thead = $("resource-table-head");
+    thead.innerHTML = `
+        <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Active</th>
+        </tr>
+    `;
+
+    $("create-user-btn").hidden = false;
+
     const loading = $("loading-indicator");
     const error = $("error-indicator");
     const tbody = $("resource-table-body");
@@ -272,61 +517,64 @@ async function reloadCurrentResource() {
     summary.textContent = "Loading...";
 
     try {
-        const path = cfg.scope === "cluster"
-            ? cfg.path()
-            : cfg.path(currentNamespace);
+        const data = await apiFetch("/users");
+        currentItems = data || [];
 
-        const data = await apiFetch(path);
+        const keyword = $("search-input").value.toLowerCase();
+        let visibleCount = 0;
 
-        // đơn giản: map object k8s -> row {name, namespace, status, age}
-        const rows = (data || []).map(item => {
-            const meta = item.metadata || {};
-            const status = item.status || {};
-            return {
-                name: meta.name || "",
-                namespace: meta.namespace || "",
-                status: status.phase || status.status || status.type || "",
-                age: meta.creationTimestamp || ""
+        currentItems.forEach((user, index) => {
+            const row = {
+                id: user.id,
+                username: user.username || "",
+                role: user.role || (user.roles && user.roles.join(",")) || "",
+                active: user.active === false ? "false" : "true"
             };
-        });
 
-        const filterInput = $("search-input");
-        const keyword = filterInput.value;
-        const filtered = applyFilter(rows, keyword);
+            if (keyword && !row.username.toLowerCase().includes(keyword)) {
+                return;
+            }
 
-        tbody.innerHTML = "";
-        filtered.forEach(r => {
             const tr = document.createElement("tr");
+            tr.dataset.index = String(index);
             tr.innerHTML = `
-                <td>${r.name}</td>
-                <td>${r.namespace}</td>
-                <td>${r.status}</td>
-                <td>${r.age}</td>
+                <td>${row.id ?? ""}</td>
+                <td>${row.username}</td>
+                <td>${row.role}</td>
+                <td>${row.active}</td>
             `;
             tbody.appendChild(tr);
+            visibleCount++;
         });
 
-        summary.textContent = `${filtered.length} items`;
+        summary.textContent = `${visibleCount} users`;
+
+        tbody.querySelectorAll("tr").forEach(tr => {
+            tr.addEventListener("click", () => {
+                const idx = Number(tr.dataset.index || "0");
+                const user = currentItems[idx];
+                openUserModal(user);
+            });
+        });
+
+        $("create-user-btn").onclick = () => openUserModal(null);
+
     } catch (err) {
-        console.error(err);
-        error.textContent = "Không load được dữ liệu: " + err.message;
+        error.textContent = err.message;
         error.hidden = false;
     } finally {
         loading.hidden = true;
     }
 }
 
-function initSearchFilter() {
-    const input = $("search-input");
-    input.addEventListener("input", () => {
-        reloadCurrentResource();
-    });
-}
+/* BOOTSTRAP */
 
-// Bootstrap
 document.addEventListener("DOMContentLoaded", () => {
     initLogin();
+    initLogout();
     initSidebarToggle();
     initNav();
     initSearchFilter();
+    initDetailModal();
+    initUserModal();
 });

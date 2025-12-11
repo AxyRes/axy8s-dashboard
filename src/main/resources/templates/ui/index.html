@@ -17,16 +17,18 @@
                 <span class="brand-dot"></span>
                 <span>AXY8S Console</span>
             </div>
-            <p class="login-subtitle">Đăng nhập để quản lý cluster. Đừng quên là production ở chỗ khác.</p>
+            <p class="login-subtitle">
+                Đăng nhập để quản lý cluster. Production thì hy vọng anh không dùng cái này.
+            </p>
 
             <form id="login-form">
-                <label class="field-label">Username</label>
+                <label class="field-label">Tên người dùng</label>
                 <input id="login-username" class="text-input" type="text" autocomplete="username" required>
 
-                <label class="field-label">Password</label>
+                <label class="field-label">Mật khẩu</label>
                 <input id="login-password" class="text-input" type="password" autocomplete="current-password" required>
 
-                <button type="submit" class="btn primary-btn">Sign in</button>
+                <button type="submit" class="btn primary-btn">Đăng nhập</button>
 
                 <div id="login-error" class="error-text" hidden></div>
             </form>
@@ -52,7 +54,6 @@
             <div class="topbar-right">
                 <div class="selector-group">
                     <label for="cluster-select">Cluster</label>
-                    <!-- Nếu sau này anh có multi-cluster thì map từ API ra -->
                     <select id="cluster-select" class="select-input">
                         <option value="default">default-cluster</option>
                     </select>
@@ -69,6 +70,8 @@
                     <span id="user-chip-name">user</span>
                     <span id="user-chip-role" class="badge">role</span>
                 </div>
+
+                <button id="logout-btn" class="btn logout-btn">Logout</button>
             </div>
         </header>
 
@@ -182,6 +185,18 @@
                             <span>Nodes</span>
                         </button>
                     </div>
+
+                    <!-- CHỈ SUPER_ADMIN / ADMIN MỚI THẤY -->
+                    <div class="nav-section" id="user-management-section" hidden>
+                        <div class="nav-section-title">Access</div>
+
+                        <button class="nav-item"
+                                data-section="access"
+                                data-resource="users">
+                            <span>Users</span>
+                        </button>
+                    </div>
+
                 </nav>
             </aside>
 
@@ -204,11 +219,12 @@
                     </div>
                 </div>
 
-                <section class="card">
+                <section class="card" id="resource-card">
                     <div class="card-header">
                         <span id="table-summary">0 items</span>
                         <div class="card-actions">
                             <input id="search-input" class="text-input small" type="text" placeholder="Filter by name...">
+                            <button id="create-user-btn" class="btn secondary-btn small" hidden>New User</button>
                         </div>
                     </div>
 
@@ -216,7 +232,7 @@
                         <div id="loading-indicator" class="loading" hidden>Loading...</div>
                         <div id="error-indicator" class="error-text" hidden></div>
                         <table class="resource-table">
-                            <thead>
+                            <thead id="resource-table-head">
                             <tr>
                                 <th>Name</th>
                                 <th>Namespace</th>
@@ -232,7 +248,62 @@
                 </section>
             </main>
         </div>
+
+        <footer class="app-footer">
+            <span>Make by <strong>AxyRes</strong></span>
+        </footer>
+
     </section>
+
+    <!-- MODAL DETAIL RESOURCE -->
+    <div id="detail-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="detail-title" class="modal-title">Detail</h2>
+                <button id="detail-close" class="icon-button close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <pre id="detail-json" class="json-view"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL USER FORM -->
+    <div id="user-modal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="user-modal-title" class="modal-title">User</h2>
+                <button id="user-modal-close" class="icon-button close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="user-form">
+                    <input type="hidden" id="user-id">
+
+                    <label class="field-label">Username</label>
+                    <input id="user-username" class="text-input" type="text" required>
+
+                    <label class="field-label">Password (để trống nếu không đổi)</label>
+                    <input id="user-password" class="text-input" type="password">
+
+                    <label class="field-label">Role</label>
+                    <select id="user-role" class="select-input">
+                        <option value="USER">USER</option>
+                        <option value="ADMIN">ADMIN</option>
+                        <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                    </select>
+
+                    <div class="modal-actions">
+                        <button type="submit" class="btn primary-btn">Save</button>
+                    </div>
+
+                    <div id="user-modal-error" class="error-text" hidden></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script type="module" th:src="@{/ui/app.js}"></script>
