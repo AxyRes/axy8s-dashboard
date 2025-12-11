@@ -4,6 +4,7 @@ import com.dofe.axy8s.user.Role;
 import com.dofe.axy8s.user.UserEntity;
 import org.junit.jupiter.api.Test;
 
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AppUserDetailsNamespaceAccessTest {

@@ -7,14 +7,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 
-/**
- * Smoke test: đảm bảo Spring context khởi động được.
- */
 @SpringBootTest
-@ActiveProfiles("test")
+@ActiveProfiles("test")  // ép dùng application-test.yml
 class Axy8sBackendApplicationTests {
 
-    // Mock KubernetesClient để test không cần connect cluster thật
     @MockBean
     private KubernetesClient kubernetesClient;
 
@@ -23,6 +19,5 @@ class Axy8sBackendApplicationTests {
 
     @Test
     void contextLoads() {
-        // Nếu context không lên được thì test này sẽ fail
     }
 }
