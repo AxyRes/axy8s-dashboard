@@ -999,14 +999,13 @@ public class KubernetesService {
             throw new IllegalArgumentException("Command must not be null or blank");
         }
 
-        var podOp = client.pods().inNamespace(namespace).withName(podName);
+        // Check pod tồn tại trước
+        var podRes = client.pods()
+                .inNamespace(namespace)
+                .withName(podName);
 
-        if (podOp.get() == null) {
+        if (podRes.get() == null) {
             throw new IllegalArgumentException("Pod not found: " + podName + " in namespace: " + namespace);
-        }
-
-        if (container != null && !container.isBlank()) {
-            podOp = podOp.inContainer(container);
         }
 
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
@@ -1014,15 +1013,29 @@ public class KubernetesService {
         ExecWatch watch = null;
 
         try {
-            // chạy /bin/sh -c "command" để FE gửi 1 dòng là đủ
-            watch = podOp
-                    .writingOutput(stdout)
-                    .writingError(stderr)
-                    .withTTY()
-                    .exec("sh", "-c", command);
+            // Nếu có container -> exec trong container đó
+            if (container != null && !container.isBlank()) {
+                watch = client.pods()
+                        .inNamespace(namespace)
+                        .withName(podName)
+                        .inContainer(container)
+                        .writingOutput(stdout)
+                        .writingError(stderr)
+                        .withTTY()
+                        .exec("sh", "-c", command);
+            } else {
+                // Không có container -> dùng container default
+                watch = client.pods()
+                        .inNamespace(namespace)
+                        .withName(podName)
+                        .writingOutput(stdout)
+                        .writingError(stderr)
+                        .withTTY()
+                        .exec("sh", "-c", command);
+            }
 
-            // Chờ command chạy 1 lúc (tạm thời blocking, kiểu "run & wait")
-            Thread.sleep(5000); // 5s, cần thì chỉnh lớn hơn
+            // Tạm thời chờ command chạy xong (blocking kiểu "run & wait")
+            Thread.sleep(5000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Interrupted while executing command in pod", e);
