@@ -4,7 +4,6 @@ import com.dofe.axy8s.user.Role;
 import com.dofe.axy8s.user.UserEntity;
 import org.junit.jupiter.api.Test;
 
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AppUserDetailsNamespaceAccessTest {
@@ -58,6 +57,16 @@ class AppUserDetailsNamespaceAccessTest {
 
         assertThat(viewer.canAccessNamespace("dev")).isFalse();
         assertThat(viewer.canAccessNamespace("any")).isFalse();
+    }
+
+    @Test
+    void viewerWithExplicitNamespacesCanOnlyViewThoseNamespaces() {
+        AppUserDetails viewer = createUser(Role.VIEWER, "dev, uat", false);
+
+        assertThat(viewer.canAccessNamespace("dev")).isTrue();
+        assertThat(viewer.canAccessNamespace("uat")).isTrue();
+        assertThat(viewer.canAccessNamespace("kube-system")).isFalse();
+        assertThat(viewer.canAccessNamespace("default")).isFalse();
     }
 
     @Test
