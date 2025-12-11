@@ -40,8 +40,7 @@ public class SecurityConfig {
                             "/h2-console/**",
                             "/swagger-ui/**",
                             "/swagger-ui.html",
-                            "/v3/api-docs/**",
-                            "/"                      // root để redirect sang swagger
+                            "/v3/api-docs/**"                    // root để redirect sang swagger
                     ).permitAll()
                     .anyRequest().authenticated()
             )
