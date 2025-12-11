@@ -1018,6 +1018,26 @@ public class K8sController {
         kubernetesService.deleteLimitRange(namespace, name);
     }
 
+    @PostMapping("/namespaces/{namespace}/pods/{pod}/exec")
+    public String execInPod(
+            @PathVariable String namespace,
+            @PathVariable String pod,
+            @RequestParam(required = false) String container,
+            @RequestParam("command") String command,
+            Authentication authentication
+    ) {
+        ensureNamespaceWriteAccess(authentication, namespace);
+
+        if (command == null || command.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "command must not be empty"
+            );
+        }
+
+        return kubernetesService.execInPod(namespace, pod, container, command);
+    }
+
     // ================== Helpers ==================
 
     private void ensureNamespaceReadAccess(Authentication authentication, String namespace) {

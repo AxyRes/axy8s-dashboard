@@ -25,6 +25,15 @@ import io.fabric8.kubernetes.api.model.storage.StorageClass;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.springframework.stereotype.Service;
 
+import io.fabric8.kubernetes.client.dsl.ExecWatch;
+import io.fabric8.kubernetes.client.dsl.ExecListener;
+import okhttp3.Response;
+
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -101,7 +110,7 @@ public class KubernetesService {
                 .withName(podName)
                 .delete();
     }
-
+    
     // ========== DEPLOYMENTS ==========
 
     public List<Deployment> listDeployments(String namespace) {
@@ -973,5 +982,81 @@ public class KubernetesService {
                 .storageClasses()
                 .withName(name)
                 .delete();
+    }
+
+    /**
+     * Exec 1 lệnh trong pod (namespace scope).
+     * Dùng cho API "terminal đơn giản": FE gửi command, backend chạy và trả về stdout + stderr.
+     */
+    public String execInPod(String namespace, String podName, String container, String command) {
+        if (namespace == null || namespace.isBlank()) {
+            throw new IllegalArgumentException("Namespace must not be null or blank");
+        }
+        if (podName == null || podName.isBlank()) {
+            throw new IllegalArgumentException("Pod name must not be null or blank");
+        }
+        if (command == null || command.isBlank()) {
+            throw new IllegalArgumentException("Command must not be null or blank");
+        }
+
+        var podOp = client.pods().inNamespace(namespace).withName(podName);
+
+        if (podOp.get() == null) {
+            throw new IllegalArgumentException("Pod not found: " + podName + " in namespace: " + namespace);
+        }
+
+        if (container != null && !container.isBlank()) {
+            podOp = podOp.inContainer(container);
+        }
+
+        ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        CountDownLatch latch = new CountDownLatch(1);
+
+        ExecListener listener = new ExecListener() {
+            @Override
+            public void onOpen(Response response) {
+                // no-op
+            }
+
+            @Override
+            public void onFailure(Throwable t, Response response) {
+                latch.countDown();
+            }
+
+            @Override
+            public void onClose(int code, String reason) {
+                latch.countDown();
+            }
+        };
+
+        ExecWatch watch = null;
+        try {
+            // chạy /bin/sh -c "command" để FE gửi 1 dòng là đủ
+            watch = podOp
+                    .writingOutput(stdout)
+                    .writingError(stderr)
+                    .withTTY()
+                    .usingListener(listener)
+                    .exec("sh", "-c", command);
+
+            // chờ tối đa 30s
+            latch.await(30, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while executing command in pod", e);
+        } finally {
+            if (watch != null) {
+                watch.close();
+            }
+        }
+
+        String out = stdout.toString(StandardCharsets.UTF_8);
+        String err = stderr.toString(StandardCharsets.UTF_8);
+
+        if (!err.isBlank()) {
+            return out + "\n[stderr]\n" + err;
+        }
+        return out;
     }
 }
