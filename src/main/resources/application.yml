@@ -34,5 +34,5 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%X{traceId}] [%thread] %logger{36} - %msg%n"
 
 ui:
-  enabled: ${UI_ENABLED:false}
+  enabled: ${UI_ENABLED}
 
