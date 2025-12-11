@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{ui/layout :: layout(~{::body})}">
+<body>
+
+<div class="content-header">
+    <div>
+        <h1 id="resource-title" class="resource-title">Pods</h1>
+        <p id="resource-subtitle" class="resource-subtitle">
+            Danh sách Pods theo namespace được chọn.
+        </p>
+    </div>
+    <div class="content-actions">
+        <span class="chip" id="current-namespace-chip">
+            ns: <span id="chip-namespace"></span>
+        </span>
+        <span class="chip" id="current-scope-chip">
+            scope: <span id="chip-scope">namespace</span>
+        </span>
+    </div>
+</div>
+
+<section class="card" id="resource-card">
+    <div class="card-header">
+        <span id="table-summary">0 items</span>
+        <div class="card-actions">
+            <input id="search-input" class="text-input small" type="text" placeholder="Filter by name...">
+            <button id="create-user-btn" class="btn secondary-btn small" hidden>New User</button>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div id="loading-indicator" class="loading" hidden>Loading...</div>
+        <div id="error-indicator" class="error-text" hidden></div>
+        <table class="resource-table">
+            <thead id="resource-table-head">
+            <tr>
+                <th>Name</th>
+                <th>Namespace</th>
+                <th>Status</th>
+                <th>Age</th>
+            </tr>
+            </thead>
+            <tbody id="resource-table-body">
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<script src="/ui/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>AXY8S Console</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link th:href="@{/ui/app.css}" rel="stylesheet">
+</head>
+<body class="app-dark">
+<div id="app-root">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <button id="sidebar-toggle" class="icon-button" aria-label="Toggle sidebar">
+                ☰
+            </button>
+            <div class="topbar-brand">
+                <span class="brand-dot"></span>
+                <span class="brand-text">AXY8S</span>
+                <span class="brand-sub">Kubernetes Console</span>
+            </div>
+        </div>
+
+        <div class="topbar-right">
+            <div class="selector-group">
+                <label for="cluster-select">Cluster</label>
+                <select id="cluster-select" class="select-input">
+                    <option value="default">default-cluster</option>
+                </select>
+            </div>
+
+            <div class="selector-group">
+                <label for="namespace-select">Namespace</label>
+                <select id="namespace-select" class="select-input">
+                    <option disabled>Loading...</option>
+                </select>
+            </div>
+
+            <div class="user-chip" id="user-chip">
+                <span id="user-chip-name">user</span>
+                <span id="user-chip-role" class="badge">role</span>
+            </div>
+
+            <button id="logout-btn" class="btn logout-btn">Logout</button>
+        </div>
+    </header>
+
+    <div class="layout">
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="sidebar">
+            <nav class="nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Workloads</div>
+                    <a href="#" class="nav-item" data-section="workloads" data-resource="pods">Pods</a>
+                    <a href="#" class="nav-item" data-section="workloads" data-resource="deployments">Deployments</a>
+                    <a href="#" class="nav-item" data-section="workloads" data-resource="statefulsets">StatefulSets</a>
+                    <a href="#" class="nav-item" data-section="workloads" data-resource="daemonsets">DaemonSets</a>
+                    <a href="#" class="nav-item" data-section="workloads" data-resource="jobs">Jobs</a>
+                    <a href="#" class="nav-item" data-section="workloads" data-resource="cronjobs">CronJobs</a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Networking</div>
+                    <a href="#" class="nav-item" data-section="networking" data-resource="services">Services</a>
+                    <a href="#" class="nav-item" data-section="networking" data-resource="ingresses">Ingresses</a>
+                    <a href="#" class="nav-item" data-section="networking" data-resource="serviceaccounts">ServiceAccounts</a>
+                    <a href="#" class="nav-item" data-section="networking" data-resource="networkpolicies">NetworkPolicies</a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Storage</div>
+                    <a href="#" class="nav-item" data-section="storage" data-resource="persistentvolumeclaims">PersistentVolumeClaims</a>
+                    <a href="#" class="nav-item" data-section="cluster" data-resource="persistentvolumes">PersistentVolumes</a>
+                    <a href="#" class="nav-item" data-section="cluster" data-resource="storageclasses">StorageClasses</a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Cluster</div>
+                    <a href="#" class="nav-item" data-section="cluster" data-resource="namespaces">Namespaces</a>
+                    <a href="#" class="nav-item" data-section="cluster" data-resource="nodes">Nodes</a>
+                </div>
+
+                <div class="nav-section" id="user-management-section" hidden>
+                    <div class="nav-section-title">Access</div>
+                    <a href="#" class="nav-item" data-section="access" data-resource="users">Users</a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="content">
+            <div th:fragment="layout(content)">
+                <div th:insert="${content}"></div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="app-footer">
+        <span>Make by <strong>AxyRes</strong></span>
+    </footer>
+
+</div>
+
+<!-- Modal detail dùng chung -->
+<div id="detail-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="detail-title" class="modal-title">Detail</h2>
+            <button id="detail-close" class="icon-button close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <pre id="detail-json" class="json-view"></pre>
+        </div>
+    </div>
+</div>
+
+<script src="/ui/common.js"></script>
+</body>
+</html>
