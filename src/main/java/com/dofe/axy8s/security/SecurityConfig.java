@@ -35,15 +35,14 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/api/auth/**",
-                    "/h2-console/**",
-                    "/ui/**",
-                    "/",
-                    "/index.html",
-                    "/favicon.ico"
-                ).permitAll()
-                .anyRequest().authenticated()
+                    .requestMatchers(
+                            "/api/auth/**",
+                            "/h2-console/**",
+                            "/swagger-ui/**",
+                            "/swagger-ui.html",
+                            "/v3/api-docs/**"                    // root để redirect sang swagger
+                    ).permitAll()
+                    .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
