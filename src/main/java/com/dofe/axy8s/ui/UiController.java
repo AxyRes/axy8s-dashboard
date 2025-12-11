@@ -20,3 +20,4 @@ public class UiController {
         return "ui/index"; // sau này anh build frontend copy file html vào đây
     }
 }
+

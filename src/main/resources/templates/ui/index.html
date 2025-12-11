@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>AXY8S Console</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link th:href="@{/ui/app.css}" rel="stylesheet">
+</head>
+<body class="app-dark">
+
+<div id="app-root">
+
+    <!-- LOGIN SCREEN -->
+    <section id="login-screen" class="full-screen centered">
+        <div class="login-card">
+            <div class="login-title">
+                <span class="brand-dot"></span>
+                <span>AXY8S Console</span>
+            </div>
+            <p class="login-subtitle">Đăng nhập để quản lý cluster. Đừng quên là production ở chỗ khác.</p>
+
+            <form id="login-form">
+                <label class="field-label">Username</label>
+                <input id="login-username" class="text-input" type="text" autocomplete="username" required>
+
+                <label class="field-label">Password</label>
+                <input id="login-password" class="text-input" type="password" autocomplete="current-password" required>
+
+                <button type="submit" class="btn primary-btn">Sign in</button>
+
+                <div id="login-error" class="error-text" hidden></div>
+            </form>
+        </div>
+    </section>
+
+    <!-- MAIN DASHBOARD -->
+    <section id="dashboard-shell" class="dashboard hidden">
+
+        <!-- TOP BAR -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button id="sidebar-toggle" class="icon-button" aria-label="Toggle sidebar">
+                    ☰
+                </button>
+                <div class="topbar-brand">
+                    <span class="brand-dot"></span>
+                    <span class="brand-text">AXY8S</span>
+                    <span class="brand-sub">Kubernetes Console</span>
+                </div>
+            </div>
+
+            <div class="topbar-right">
+                <div class="selector-group">
+                    <label for="cluster-select">Cluster</label>
+                    <!-- Nếu sau này anh có multi-cluster thì map từ API ra -->
+                    <select id="cluster-select" class="select-input">
+                        <option value="default">default-cluster</option>
+                    </select>
+                </div>
+
+                <div class="selector-group">
+                    <label for="namespace-select">Namespace</label>
+                    <select id="namespace-select" class="select-input">
+                        <option disabled>Loading...</option>
+                    </select>
+                </div>
+
+                <div class="user-chip" id="user-chip">
+                    <span id="user-chip-name">user</span>
+                    <span id="user-chip-role" class="badge">role</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- BODY: SIDEBAR + CONTENT -->
+        <div class="layout">
+            <!-- SIDEBAR -->
+            <aside id="sidebar" class="sidebar">
+                <nav class="nav">
+                    <div class="nav-section">
+                        <div class="nav-section-title">Workloads</div>
+
+                        <button class="nav-item active"
+                                data-section="workloads"
+                                data-resource="pods">
+                            <span>Pods</span>
+                        </button>
+
+                        <button class="nav-item"
+                                data-section="workloads"
+                                data-resource="deployments">
+                            <span>Deployments</span>
+                        </button>
+
+                        <button class="nav-item"
+                                data-section="workloads"
+                                data-resource="statefulsets">
+                            <span>StatefulSets</span>
+                        </button>
+
+                        <button class="nav-item"
+                                data-section="workloads"
+                                data-resource="daemonsets">
+                            <span>DaemonSets</span>
+                        </button>
+
+                        <button class="nav-item"
+                                data-section="workloads"
+                                data-resource="jobs">
+                            <span>Jobs</span>
+                        </button>
+
+                        <button class="nav-item"
+                                data-section="workloads"
+                                data-resource="cronjobs">
+                            <span>CronJobs</span>
+                        </button>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-title">Networking</div>
+
+                        <button class="nav-item"
+                                data-section="networking"
+                                data-resource="services">
+                            <span>Services</span>
+                        </button>
+
+                        <button class="nav-item"
+                                data-section="networking"
+                                data-resource="ingresses">
+                            <span>Ingresses</span>
+                        </button>
+
+                        <button class="nav-item"
+                                data-section="networking"
+                                data-resource="serviceaccounts">
+                            <span>ServiceAccounts</span>
+                        </button>
+
+                        <button class="nav-item"
+                                data-section="networking"
+                                data-resource="networkpolicies">
+                            <span>NetworkPolicies</span>
+                        </button>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-title">Storage</div>
+
+                        <button class="nav-item"
+                                data-section="storage"
+                                data-resource="persistentvolumeclaims">
+                            <span>PersistentVolumeClaims</span>
+                        </button>
+
+                        <button class="nav-item"
+                                data-section="cluster"
+                                data-resource="persistentvolumes">
+                            <span>PersistentVolumes</span>
+                        </button>
+
+                        <button class="nav-item"
+                                data-section="cluster"
+                                data-resource="storageclasses">
+                            <span>StorageClasses</span>
+                        </button>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-title">Cluster</div>
+
+                        <button class="nav-item"
+                                data-section="cluster"
+                                data-resource="namespaces">
+                            <span>Namespaces</span>
+                        </button>
+
+                        <button class="nav-item"
+                                data-section="cluster"
+                                data-resource="nodes">
+                            <span>Nodes</span>
+                        </button>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- MAIN CONTENT -->
+            <main class="content">
+                <div class="content-header">
+                    <div>
+                        <h1 id="resource-title" class="resource-title">Pods</h1>
+                        <p id="resource-subtitle" class="resource-subtitle">
+                            Danh sách Pods theo namespace được chọn.
+                        </p>
+                    </div>
+                    <div class="content-actions">
+                        <span class="chip" id="current-namespace-chip">
+                            ns: <span id="chip-namespace"></span>
+                        </span>
+                        <span class="chip" id="current-scope-chip">
+                            scope: <span id="chip-scope">namespace</span>
+                        </span>
+                    </div>
+                </div>
+
+                <section class="card">
+                    <div class="card-header">
+                        <span id="table-summary">0 items</span>
+                        <div class="card-actions">
+                            <input id="search-input" class="text-input small" type="text" placeholder="Filter by name...">
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div id="loading-indicator" class="loading" hidden>Loading...</div>
+                        <div id="error-indicator" class="error-text" hidden></div>
+                        <table class="resource-table">
+                            <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Namespace</th>
+                                <th>Status</th>
+                                <th>Age</th>
+                            </tr>
+                            </thead>
+                            <tbody id="resource-table-body">
+                            <!-- rows filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </section>
+</div>
+
+<script type="module" th:src="@{/ui/app.js}"></script>
+</body>
+</html>
