@@ -1019,27 +1019,41 @@ public class K8sController {
     }
 
     @PostMapping("/namespaces/{namespace}/pods/{pod}/exec")
-    public String execInPod(
+    public PodExecResponse execInPod(
             @PathVariable String namespace,
             @PathVariable String pod,
-            @RequestParam(required = false) String container,
-            @RequestParam("command") String command,
+            @RequestBody PodExecRequest request,
             Authentication authentication
     ) {
-        // exec là thao tác "write" trên namespace:
-        // - SUPER_ADMIN / ADMIN / USER có namespace -> OK
-        // - VIEWER -> bị chặn
-        ensureNamespaceWriteAccess(authentication, namespace);
+        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
 
-        if (command == null || command.isBlank()) {
+        // user phải có quyền trên namespace
+        if (!user.canAccessNamespace(namespace)) {
             throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "command must not be empty"
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to access namespace: " + namespace
             );
         }
 
-        return kubernetesService.execInPod(namespace, pod, container, command);
+        // VIEWER không được exec, USER/ADMIN/SUPER_ADMIN được
+        if (user.isViewer()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "VIEWER is not allowed to exec commands in pod"
+            );
+        }
+
+        String out = kubernetesService.execInPod(
+                namespace,
+                pod,
+                request.getContainer(),
+                request.getCommand()
+        );
+
+        return new PodExecResponse(out);
     }
+
+    
 
     // ================== Helpers ==================
 
