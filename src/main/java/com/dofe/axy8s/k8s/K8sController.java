@@ -1026,6 +1026,9 @@ public class K8sController {
             @RequestParam("command") String command,
             Authentication authentication
     ) {
+        // exec là thao tác "write" trên namespace:
+        // - SUPER_ADMIN / ADMIN / USER có namespace -> OK
+        // - VIEWER -> bị chặn
         ensureNamespaceWriteAccess(authentication, namespace);
 
         if (command == null || command.isBlank()) {

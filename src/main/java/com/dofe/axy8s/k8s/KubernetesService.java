@@ -26,13 +26,9 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import org.springframework.stereotype.Service;
 
 import io.fabric8.kubernetes.client.dsl.ExecWatch;
-import io.fabric8.kubernetes.client.dsl.ExecListener;
-import okhttp3.Response;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -988,6 +984,10 @@ public class KubernetesService {
      * Exec 1 lệnh trong pod (namespace scope).
      * Dùng cho API "terminal đơn giản": FE gửi command, backend chạy và trả về stdout + stderr.
      */
+    /**
+     * Exec 1 lệnh trong pod (namespace scope).
+     * Dùng cho API "terminal đơn giản": FE gửi command, backend chạy và trả về stdout + stderr.
+     */
     public String execInPod(String namespace, String podName, String container, String command) {
         if (namespace == null || namespace.isBlank()) {
             throw new IllegalArgumentException("Namespace must not be null or blank");
@@ -1011,37 +1011,18 @@ public class KubernetesService {
 
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
-        CountDownLatch latch = new CountDownLatch(1);
-
-        ExecListener listener = new ExecListener() {
-            @Override
-            public void onOpen(Response response) {
-                // no-op
-            }
-
-            @Override
-            public void onFailure(Throwable t, Response response) {
-                latch.countDown();
-            }
-
-            @Override
-            public void onClose(int code, String reason) {
-                latch.countDown();
-            }
-        };
-
         ExecWatch watch = null;
+
         try {
             // chạy /bin/sh -c "command" để FE gửi 1 dòng là đủ
             watch = podOp
                     .writingOutput(stdout)
                     .writingError(stderr)
                     .withTTY()
-                    .usingListener(listener)
                     .exec("sh", "-c", command);
 
-            // chờ tối đa 30s
-            latch.await(30, TimeUnit.SECONDS);
+            // Chờ command chạy 1 lúc (tạm thời blocking, kiểu "run & wait")
+            Thread.sleep(5000); // 5s, cần thì chỉnh lớn hơn
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Interrupted while executing command in pod", e);
