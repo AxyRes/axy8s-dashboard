@@ -17,8 +17,6 @@ spec:
         - name: axy8s-backend-api
           image: nexus.trainingdevsecops.com/dofe/axy8s/axy8s-backend:1.0.0-patch
           imagePullPolicy: Always
-          imagePullSecrets:
-            - name: nexus-pull-secret
           ports:
             - containerPort: 8080
               name: http
