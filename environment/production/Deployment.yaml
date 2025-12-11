@@ -26,6 +26,8 @@ spec:
             - secretRef:
                 name: axy8s-backend-secret
           env:
+            - name: UI_ENABLED
+              value: "true"
             - name: LOG_LEVEL
               value: "INFO"
             - name: APP_LOG_LEVEL
@@ -78,8 +80,6 @@ spec:
           ports:
             - containerPort: 5432
           env:
-            - name: UI_ENABLED
-              value: "true"
             - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
