@@ -23,22 +23,39 @@ public class K8sClusterController {
 
     // ========== Helper cho cluster-scope ==========
 
-    private void ensureClusterAdmin(AppUserDetails user) {
+    private AppUserDetails currentUser(Authentication authentication) {
+        return (AppUserDetails) authentication.getPrincipal();
+    }
+
+    // hiện tại: cả READ/WRITE đều chỉ cho SUPER_ADMIN & ADMIN
+    private void ensureClusterReadAccess(Authentication authentication) {
+        AppUserDetails user = currentUser(authentication);
         if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can access cluster-scoped resources"
+                    "Only SUPER_ADMIN or ADMIN can view cluster-scoped resources"
             );
         }
+    }
+
+    private void ensureClusterWriteAccess(Authentication authentication) {
+        AppUserDetails user = currentUser(authentication);
+        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only SUPER_ADMIN or ADMIN can modify cluster-scoped resources"
+            );
+        }
+
+        // Nếu sau này muốn chỉ SUPER_ADMIN được write thì sửa thành:
+        // if (user.getRole() != Role.SUPER_ADMIN) { ... }
     }
 
     // ========== PERSISTENTVOLUMES (CLUSTER SCOPE) ==========
 
     @GetMapping("/persistentvolumes")
     public List<PersistentVolume> getPersistentVolumes(Authentication authentication) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureClusterAdmin(user);
-
+        ensureClusterReadAccess(authentication);
         return kubernetesService.listPersistentVolumes();
     }
 
@@ -47,8 +64,7 @@ public class K8sClusterController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureClusterAdmin(user);
+        ensureClusterReadAccess(authentication);
 
         PersistentVolume pv = kubernetesService.getPersistentVolume(name);
         if (pv == null) {
@@ -65,8 +81,7 @@ public class K8sClusterController {
             @RequestBody PersistentVolume pv,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureClusterAdmin(user);
+        ensureClusterWriteAccess(authentication);
 
         try {
             return kubernetesService.createOrUpdatePersistentVolume(pv);
@@ -80,9 +95,7 @@ public class K8sClusterController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureClusterAdmin(user);
-
+        ensureClusterWriteAccess(authentication);
         kubernetesService.deletePersistentVolume(name);
     }
 
@@ -90,9 +103,7 @@ public class K8sClusterController {
 
     @GetMapping("/storageclasses")
     public List<StorageClass> getStorageClasses(Authentication authentication) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureClusterAdmin(user);
-
+        ensureClusterReadAccess(authentication);
         return kubernetesService.listStorageClasses();
     }
 
@@ -101,8 +112,7 @@ public class K8sClusterController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureClusterAdmin(user);
+        ensureClusterReadAccess(authentication);
 
         StorageClass sc = kubernetesService.getStorageClass(name);
         if (sc == null) {
@@ -119,8 +129,7 @@ public class K8sClusterController {
             @RequestBody StorageClass sc,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureClusterAdmin(user);
+        ensureClusterWriteAccess(authentication);
 
         try {
             return kubernetesService.createOrUpdateStorageClass(sc);
@@ -134,9 +143,7 @@ public class K8sClusterController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureClusterAdmin(user);
-
+        ensureClusterWriteAccess(authentication);
         kubernetesService.deleteStorageClass(name);
     }
 }

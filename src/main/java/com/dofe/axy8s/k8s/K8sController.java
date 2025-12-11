@@ -40,6 +40,8 @@ public class K8sController {
         this.kubernetesService = kubernetesService;
     }
 
+    // ================== NAMESPACES ==================
+
     @GetMapping("/namespaces")
     public List<Namespace> getNamespaces(Authentication authentication) {
         AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
@@ -51,16 +53,14 @@ public class K8sController {
                 .toList();
     }
 
+    // ================== PODS ==================
+
     @GetMapping("/namespaces/{namespace}/pods")
     public List<Pod> getPods(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        if (!user.canAccessNamespace(namespace)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "User is not allowed to access namespace: " + namespace);
-        }
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listPods(namespace);
     }
 
@@ -71,16 +71,9 @@ public class K8sController {
             @RequestParam(required = false) String container,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        if (!user.canAccessNamespace(namespace)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "User is not allowed to access namespace: " + namespace);
-        }
-
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.getPodLogs(namespace, pod, container);
     }
-
-    // NEW: delete pod (coi như restart pod nếu thuộc deployment)
 
     @DeleteMapping("/namespaces/{namespace}/pods/{pod}")
     public void deletePod(
@@ -88,29 +81,18 @@ public class K8sController {
             @PathVariable String pod,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        // chỉ SUPER_ADMIN & ADMIN được xoá pod
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete pods"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deletePod(namespace, pod);
     }
 
-    // ========== DEPLOYMENTS (đã bổ sung trước) ==========
+    // ================== DEPLOYMENTS ==================
 
     @GetMapping("/namespaces/{namespace}/deployments")
     public List<Deployment> getDeployments(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listDeployments(namespace);
     }
 
@@ -120,8 +102,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         Deployment deployment = kubernetesService.getDeployment(namespace, name);
         if (deployment == null) {
@@ -139,15 +120,7 @@ public class K8sController {
             @RequestBody Deployment deployment,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update deployments"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateDeployment(namespace, deployment);
@@ -162,20 +135,9 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete deployments"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteDeployment(namespace, name);
     }
-
-    // NEW: restart deployment (rollout restart)
 
     @PostMapping("/namespaces/{namespace}/deployments/{name}/restart")
     public void restartDeployment(
@@ -183,15 +145,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can restart deployments"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             kubernetesService.restartDeployment(namespace, name);
@@ -200,15 +154,14 @@ public class K8sController {
         }
     }
 
-    // ========== SERVICES ==========
+    // ================== SERVICES ==================
 
     @GetMapping("/namespaces/{namespace}/services")
     public List<Service> getServices(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listServices(namespace);
     }
 
@@ -218,8 +171,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         Service service = kubernetesService.getService(namespace, name);
         if (service == null) {
@@ -237,15 +189,7 @@ public class K8sController {
             @RequestBody Service service,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update services"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateService(namespace, service);
@@ -260,28 +204,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete services"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteService(namespace, name);
     }
 
-     // ========== CONFIGMAPS ==========
+    // ================== CONFIGMAPS ==================
 
     @GetMapping("/namespaces/{namespace}/configmaps")
-    public java.util.List<ConfigMap> getConfigMaps(
+    public List<ConfigMap> getConfigMaps(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listConfigMaps(namespace);
     }
 
@@ -291,8 +225,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         ConfigMap cm = kubernetesService.getConfigMap(namespace, name);
         if (cm == null) {
@@ -310,15 +243,7 @@ public class K8sController {
             @RequestBody ConfigMap configMap,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update configmaps"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateConfigMap(namespace, configMap);
@@ -333,36 +258,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete configmaps"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteConfigMap(namespace, name);
     }
 
-    // ========== SECRETS ==========
+    // ================== SECRETS ==================
 
     @GetMapping("/namespaces/{namespace}/secrets")
-    public java.util.List<Secret> getSecrets(
+    public List<Secret> getSecrets(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can list secrets"
-            );
-        }
-
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listSecrets(namespace);
     }
 
@@ -372,15 +279,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can get secrets"
-            );
-        }
+        ensureNamespaceReadAccess(authentication, namespace);
 
         Secret secret = kubernetesService.getSecret(namespace, name);
         if (secret == null) {
@@ -398,15 +297,7 @@ public class K8sController {
             @RequestBody Secret secret,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update secrets"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateSecret(namespace, secret);
@@ -421,29 +312,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete secrets"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteSecret(namespace, name);
     }
 
-    // ========== CRONJOBS ==========
+    // ================== CRONJOBS ==================
 
     @GetMapping("/namespaces/{namespace}/cronjobs")
-    public java.util.List<CronJob> getCronJobs(
+    public List<CronJob> getCronJobs(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-        // Cho mọi role có quyền namespace đều xem được
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listCronJobs(namespace);
     }
 
@@ -453,8 +333,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         CronJob cronJob = kubernetesService.getCronJob(namespace, name);
         if (cronJob == null) {
@@ -472,16 +351,7 @@ public class K8sController {
             @RequestBody CronJob cronJob,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        // CRUD CronJob: chỉ ADMIN + SUPER_ADMIN
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update cronjobs"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateCronJob(namespace, cronJob);
@@ -496,28 +366,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete cronjobs"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteCronJob(namespace, name);
     }
 
-     // ========== JOBS ==========
+    // ================== JOBS ==================
 
     @GetMapping("/namespaces/{namespace}/jobs")
-    public java.util.List<Job> getJobs(
+    public List<Job> getJobs(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listJobs(namespace);
     }
 
@@ -527,8 +387,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         Job job = kubernetesService.getJob(namespace, name);
         if (job == null) {
@@ -546,15 +405,7 @@ public class K8sController {
             @RequestBody Job job,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update jobs"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateJob(namespace, job);
@@ -569,28 +420,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete jobs"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteJob(namespace, name);
     }
 
-    // ========== REPLICASETS ==========
+    // ================== REPLICASETS ==================
 
     @GetMapping("/namespaces/{namespace}/replicasets")
-    public java.util.List<ReplicaSet> getReplicaSets(
+    public List<ReplicaSet> getReplicaSets(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listReplicaSets(namespace);
     }
 
@@ -600,8 +441,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         ReplicaSet rs = kubernetesService.getReplicaSet(namespace, name);
         if (rs == null) {
@@ -619,15 +459,7 @@ public class K8sController {
             @RequestBody ReplicaSet replicaSet,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update replicasets"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateReplicaSet(namespace, replicaSet);
@@ -642,28 +474,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete replicasets"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteReplicaSet(namespace, name);
     }
 
-        // ========== STATEFULSETS ==========
+    // ================== STATEFULSETS ==================
 
     @GetMapping("/namespaces/{namespace}/statefulsets")
-    public java.util.List<StatefulSet> getStatefulSets(
+    public List<StatefulSet> getStatefulSets(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listStatefulSets(namespace);
     }
 
@@ -673,8 +495,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         StatefulSet ss = kubernetesService.getStatefulSet(namespace, name);
         if (ss == null) {
@@ -692,15 +513,7 @@ public class K8sController {
             @RequestBody StatefulSet statefulSet,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update statefulsets"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateStatefulSet(namespace, statefulSet);
@@ -715,28 +528,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete statefulsets"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteStatefulSet(namespace, name);
     }
 
-        // ========== DAEMONSETS ==========
+    // ================== DAEMONSETS ==================
 
     @GetMapping("/namespaces/{namespace}/daemonsets")
-    public java.util.List<DaemonSet> getDaemonSets(
+    public List<DaemonSet> getDaemonSets(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listDaemonSets(namespace);
     }
 
@@ -746,8 +549,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         DaemonSet ds = kubernetesService.getDaemonSet(namespace, name);
         if (ds == null) {
@@ -765,15 +567,7 @@ public class K8sController {
             @RequestBody DaemonSet daemonSet,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update daemonsets"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateDaemonSet(namespace, daemonSet);
@@ -788,28 +582,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete daemonsets"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteDaemonSet(namespace, name);
     }
 
-        // ========== PERSISTENTVOLUMECLAIMS (PVC) ==========
+    // ================== PVC ==================
 
     @GetMapping("/namespaces/{namespace}/persistentvolumeclaims")
-    public java.util.List<PersistentVolumeClaim> getPersistentVolumeClaims(
+    public List<PersistentVolumeClaim> getPersistentVolumeClaims(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listPersistentVolumeClaims(namespace);
     }
 
@@ -819,8 +603,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         PersistentVolumeClaim pvc = kubernetesService.getPersistentVolumeClaim(namespace, name);
         if (pvc == null) {
@@ -838,15 +621,7 @@ public class K8sController {
             @RequestBody PersistentVolumeClaim pvc,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update PVCs"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdatePersistentVolumeClaim(namespace, pvc);
@@ -861,28 +636,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete PVCs"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deletePersistentVolumeClaim(namespace, name);
     }
 
-        // ========== INGRESS ==========
+    // ================== INGRESS ==================
 
     @GetMapping("/namespaces/{namespace}/ingresses")
-    public java.util.List<Ingress> getIngresses(
+    public List<Ingress> getIngresses(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listIngresses(namespace);
     }
 
@@ -892,8 +657,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         Ingress ing = kubernetesService.getIngress(namespace, name);
         if (ing == null) {
@@ -911,15 +675,7 @@ public class K8sController {
             @RequestBody Ingress ingress,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update ingresses"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateIngress(namespace, ingress);
@@ -934,28 +690,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete ingresses"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteIngress(namespace, name);
     }
 
-        // ========== SERVICEACCOUNTS ==========
+    // ================== SERVICEACCOUNTS ==================
 
     @GetMapping("/namespaces/{namespace}/serviceaccounts")
-    public java.util.List<ServiceAccount> getServiceAccounts(
+    public List<ServiceAccount> getServiceAccounts(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listServiceAccounts(namespace);
     }
 
@@ -965,8 +711,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         ServiceAccount sa = kubernetesService.getServiceAccount(namespace, name);
         if (sa == null) {
@@ -984,15 +729,7 @@ public class K8sController {
             @RequestBody ServiceAccount sa,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update serviceaccounts"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateServiceAccount(namespace, sa);
@@ -1007,28 +744,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete serviceaccounts"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteServiceAccount(namespace, name);
     }
 
-        // ========== HPA ==========
+    // ================== HPA ==================
 
     @GetMapping("/namespaces/{namespace}/hpas")
-    public java.util.List<HorizontalPodAutoscaler> getHorizontalPodAutoscalers(
+    public List<HorizontalPodAutoscaler> getHorizontalPodAutoscalers(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listHorizontalPodAutoscalers(namespace);
     }
 
@@ -1038,8 +765,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         HorizontalPodAutoscaler hpa = kubernetesService.getHorizontalPodAutoscaler(namespace, name);
         if (hpa == null) {
@@ -1057,15 +783,7 @@ public class K8sController {
             @RequestBody HorizontalPodAutoscaler hpa,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update hpas"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateHorizontalPodAutoscaler(namespace, hpa);
@@ -1080,28 +798,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete hpas"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteHorizontalPodAutoscaler(namespace, name);
     }
 
-        // ========== NETWORKPOLICIES ==========
+    // ================== NETWORKPOLICIES ==================
 
     @GetMapping("/namespaces/{namespace}/networkpolicies")
-    public java.util.List<NetworkPolicy> getNetworkPolicies(
+    public List<NetworkPolicy> getNetworkPolicies(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listNetworkPolicies(namespace);
     }
 
@@ -1111,8 +819,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         NetworkPolicy np = kubernetesService.getNetworkPolicy(namespace, name);
         if (np == null) {
@@ -1130,15 +837,7 @@ public class K8sController {
             @RequestBody NetworkPolicy np,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update networkpolicies"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateNetworkPolicy(namespace, np);
@@ -1153,28 +852,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete networkpolicies"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteNetworkPolicy(namespace, name);
     }
 
-        // ========== POD DISRUPTION BUDGETS (PDB) ==========
+    // ================== PDB ==================
 
     @GetMapping("/namespaces/{namespace}/poddisruptionbudgets")
-    public java.util.List<PodDisruptionBudget> getPodDisruptionBudgets(
+    public List<PodDisruptionBudget> getPodDisruptionBudgets(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listPodDisruptionBudgets(namespace);
     }
 
@@ -1184,8 +873,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         PodDisruptionBudget pdb = kubernetesService.getPodDisruptionBudget(namespace, name);
         if (pdb == null) {
@@ -1203,15 +891,7 @@ public class K8sController {
             @RequestBody PodDisruptionBudget pdb,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update pdbs"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdatePodDisruptionBudget(namespace, pdb);
@@ -1226,28 +906,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete pdbs"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deletePodDisruptionBudget(namespace, name);
     }
 
-        // ========== RESOURCE QUOTAS ==========
+    // ================== RESOURCE QUOTAS ==================
 
     @GetMapping("/namespaces/{namespace}/resourcequotas")
-    public java.util.List<ResourceQuota> getResourceQuotas(
+    public List<ResourceQuota> getResourceQuotas(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listResourceQuotas(namespace);
     }
 
@@ -1257,8 +927,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         ResourceQuota rq = kubernetesService.getResourceQuota(namespace, name);
         if (rq == null) {
@@ -1276,15 +945,7 @@ public class K8sController {
             @RequestBody ResourceQuota rq,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update resourcequotas"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateResourceQuota(namespace, rq);
@@ -1299,28 +960,18 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete resourcequotas"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteResourceQuota(namespace, name);
     }
 
-        // ========== LIMIT RANGES ==========
+    // ================== LIMIT RANGES ==================
 
     @GetMapping("/namespaces/{namespace}/limitranges")
-    public java.util.List<LimitRange> getLimitRanges(
+    public List<LimitRange> getLimitRanges(
             @PathVariable String namespace,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
         return kubernetesService.listLimitRanges(namespace);
     }
 
@@ -1330,8 +981,7 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
+        ensureNamespaceReadAccess(authentication, namespace);
 
         LimitRange lr = kubernetesService.getLimitRange(namespace, name);
         if (lr == null) {
@@ -1349,15 +999,7 @@ public class K8sController {
             @RequestBody LimitRange lr,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can create or update limitranges"
-            );
-        }
+        ensureNamespaceWriteAccess(authentication, namespace);
 
         try {
             return kubernetesService.createOrUpdateLimitRange(namespace, lr);
@@ -1372,28 +1014,37 @@ public class K8sController {
             @PathVariable String name,
             Authentication authentication
     ) {
-        AppUserDetails user = (AppUserDetails) authentication.getPrincipal();
-        ensureNamespaceAccess(user, namespace);
-
-        if (!(user.getRole() == Role.SUPER_ADMIN || user.getRole() == Role.ADMIN)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN,
-                    "Only SUPER_ADMIN or ADMIN can delete limitranges"
-            );
-        }
-
+        ensureNamespaceWriteAccess(authentication, namespace);
         kubernetesService.deleteLimitRange(namespace, name);
     }
 
-    
+    // ================== Helpers ==================
 
-    // ========== Helper ==========
+    private void ensureNamespaceReadAccess(Authentication authentication, String namespace) {
+        AppUserDetails currentUser = (AppUserDetails) authentication.getPrincipal();
 
-    private void ensureNamespaceAccess(AppUserDetails user, String namespace) {
-        if (!user.canAccessNamespace(namespace)) {
+        if (!currentUser.canAccessNamespace(namespace)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
-                    "User is not allowed to access namespace: " + namespace
+                    "You are not allowed to access namespace: " + namespace
+            );
+        }
+    }
+
+    private void ensureNamespaceWriteAccess(Authentication authentication, String namespace) {
+        AppUserDetails currentUser = (AppUserDetails) authentication.getPrincipal();
+
+        if (!currentUser.canAccessNamespace(namespace)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to access namespace: " + namespace
+            );
+        }
+
+        if (currentUser.getRole() == Role.VIEWER) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "VIEWER is read-only for namespace: " + namespace
             );
         }
     }

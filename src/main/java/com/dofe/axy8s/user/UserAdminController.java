@@ -2,11 +2,13 @@ package com.dofe.axy8s.user;
 
 import com.dofe.axy8s.security.AppUserDetails;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -98,5 +100,82 @@ public class UserAdminController {
         userRepository.save(target);
 
         return ResponseEntity.ok("Password updated");
+    }
+
+    /**
+     * Cập nhật user (role / namespaces / active).
+     * SUPER_ADMIN & ADMIN được sửa.
+     *
+     * Rule:
+     *  - System user: chỉ SUPER_ADMIN đụng vào được.
+     *  - SUPER_ADMIN user:
+     *      + chỉ SUPER_ADMIN được sửa
+     *      + ADMIN không được nâng role ai lên SUPER_ADMIN
+     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ADMIN')")
+    public ResponseEntity<?> updateUser(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateUserRequest request,
+            Authentication authentication
+    ) {
+        AppUserDetails current = (AppUserDetails) authentication.getPrincipal();
+
+        UserEntity target = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User không tồn tại"));
+
+        // System user: chỉ SUPER_ADMIN được chỉnh
+        if (target.isSystemUser() && !current.isSuperAdmin()) {
+            return ResponseEntity.status(403)
+                    .body("Only SUPER_ADMIN can modify system users");
+        }
+
+        // Nếu target là SUPER_ADMIN mà current không phải SUPER_ADMIN -> chặn
+        if (target.getRole() == Role.SUPER_ADMIN && !current.isSuperAdmin()) {
+            return ResponseEntity.status(403)
+                    .body("Only SUPER_ADMIN can modify SUPER_ADMIN users");
+        }
+
+        // Nếu đang set role mới là SUPER_ADMIN mà current không phải SUPER_ADMIN -> chặn
+        if (request.getRole() == Role.SUPER_ADMIN && !current.isSuperAdmin()) {
+            return ResponseEntity.status(403)
+                    .body("Only SUPER_ADMIN can assign SUPER_ADMIN role");
+        }
+
+        if (request.getRole() != null) {
+            target.setRole(request.getRole());
+        }
+
+        if (request.getAllowedNamespaces() != null) {
+            target.setAllowedNamespaces(request.getAllowedNamespaces());
+        }
+
+        if (request.getActive() != null) {
+            target.setActive(request.getActive());
+        }
+
+        userRepository.save(target);
+        return ResponseEntity.ok("User updated");
+    }
+
+    /**
+     * Xóa user.
+     * Chỉ SUPER_ADMIN.
+     * Không cho xóa system user.
+     */
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        UserEntity target = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "User không tồn tại"));
+
+        if (target.isSystemUser()) {
+            return ResponseEntity.badRequest().body("System user không được phép xóa");
+        }
+
+        userRepository.delete(target);
+        return ResponseEntity.noContent().build();
     }
 }

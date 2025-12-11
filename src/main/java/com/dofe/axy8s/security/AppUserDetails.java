@@ -37,6 +37,15 @@ public class AppUserDetails implements UserDetails {
         return user.isSystemUser();
     }
 
+    public boolean isUser() {
+        return user.getRole() == Role.USER;
+    }
+
+    public boolean isViewer() {
+        return user.getRole() == Role.VIEWER;
+    }
+
+
     /**
      * Kiểm tra user có được phép truy cập namespace này không.
      *
@@ -84,6 +93,13 @@ public class AppUserDetails implements UserDetails {
         }
 
         return false;
+    }
+
+    public boolean canWriteNamespace(String namespace) {
+        if (!canAccessNamespace(namespace)) {
+            return false;
+        }
+        return isSuperAdmin() || isAdmin() || isUser();
     }
 
     @Override
