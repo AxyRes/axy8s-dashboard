@@ -32,16 +32,22 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
-                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .httpBasic(Customizer.withDefaults());
+            .csrf(csrf -> csrf.disable())
+            .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
+            .authorizeHttpRequests(auth -> auth
+                    .requestMatchers(
+                            "/api/auth/**",
+                            "/h2-console/**",
+                            "/swagger-ui/**",
+                            "/swagger-ui.html",
+                            "/v3/api-docs/**",
+                            "/"                      // root để redirect sang swagger
+                    ).permitAll()
+                    .anyRequest().authenticated()
+            )
+            .authenticationProvider(authenticationProvider())
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+            .httpBasic(Customizer.withDefaults());
 
         return http.build();
     }
