@@ -19,6 +19,9 @@ import io.fabric8.kubernetes.api.model.networking.v1.NetworkPolicy;
 import io.fabric8.kubernetes.api.model.autoscaling.v2.HorizontalPodAutoscaler;
 import io.fabric8.kubernetes.api.model.policy.v1.PodDisruptionBudget;
 
+import io.fabric8.kubernetes.api.model.PersistentVolume;
+import io.fabric8.kubernetes.api.model.storage.StorageClass;
+
 import io.fabric8.kubernetes.client.KubernetesClient;
 import org.springframework.stereotype.Service;
 
@@ -42,6 +45,30 @@ public class KubernetesService {
         return client.namespaces()
                 .list()
                 .getItems();
+    }
+
+    public Namespace getNamespace(String name) {
+        return client.namespaces()
+                .withName(name)
+                .get();
+    }
+
+    public Namespace createOrUpdateNamespace(Namespace namespace) {
+        if (namespace == null || namespace.getMetadata() == null ||
+                namespace.getMetadata().getName() == null ||
+                namespace.getMetadata().getName().isBlank()) {
+            throw new IllegalArgumentException("Namespace metadata.name is required");
+        }
+
+        return client.namespaces()
+                .resource(namespace)
+                .createOrReplace();
+    }
+
+    public void deleteNamespace(String name) {
+        client.namespaces()
+                .withName(name)
+                .delete();
     }
 
     // ========== PODS & LOGS ==========
@@ -876,5 +903,75 @@ public class KubernetesService {
                 .delete();
     }
 
+    // ========== PERSISTENTVOLUMES (CLUSTER SCOPE) ==========
 
+    public java.util.List<PersistentVolume> listPersistentVolumes() {
+        return client.persistentVolumes()
+                .list()
+                .getItems();
+    }
+
+    public PersistentVolume getPersistentVolume(String name) {
+        return client.persistentVolumes()
+                .withName(name)
+                .get();
+    }
+
+    public PersistentVolume createOrUpdatePersistentVolume(PersistentVolume pv) {
+        if (pv == null || pv.getMetadata() == null ||
+                pv.getMetadata().getName() == null ||
+                pv.getMetadata().getName().isBlank()) {
+            throw new IllegalArgumentException("PersistentVolume metadata.name is required");
+        }
+
+        return client.persistentVolumes()
+                .resource(pv)
+                .createOrReplace();
+    }
+
+    public void deletePersistentVolume(String name) {
+        client.persistentVolumes()
+                .withName(name)
+                .delete();
+    }
+
+    // ========== STORAGECLASSES (CLUSTER SCOPE) ==========
+
+    public java.util.List<StorageClass> listStorageClasses() {
+        return client.storage()
+                .v1()
+                .storageClasses()
+                .list()
+                .getItems();
+    }
+
+    public StorageClass getStorageClass(String name) {
+        return client.storage()
+                .v1()
+                .storageClasses()
+                .withName(name)
+                .get();
+    }
+
+    public StorageClass createOrUpdateStorageClass(StorageClass sc) {
+        if (sc == null || sc.getMetadata() == null ||
+                sc.getMetadata().getName() == null ||
+                sc.getMetadata().getName().isBlank()) {
+            throw new IllegalArgumentException("StorageClass metadata.name is required");
+        }
+
+        return client.storage()
+                .v1()
+                .storageClasses()
+                .resource(sc)
+                .createOrReplace();
+    }
+
+    public void deleteStorageClass(String name) {
+        client.storage()
+                .v1()
+                .storageClasses()
+                .withName(name)
+                .delete();
+    }
 }

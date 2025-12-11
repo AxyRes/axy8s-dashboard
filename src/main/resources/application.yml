@@ -1,24 +1,38 @@
 server:
   port: 8080
 
-spring:
-  datasource:
-    url: jdbc:h2:mem:axy8sdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
-    username: sa
-    password:
-    driverClassName: org.h2.Driver
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate.format_sql: true
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-
 app:
   security:
     jwt-secret: "change-this-to-a-very-long-random-secret-for-real-env"
     jwt-expiration-minutes: 120
+
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update 
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+
+  thymeleaf:
+    cache: ${THYMELEAF_CACHE:false}
+
+logging:
+  level:
+    root: ${LOG_LEVEL:INFO}
+    com.devsecops: ${APP_LOG_LEVEL:DEBUG}
+  file:
+    name: ${LOG_FILE:/var/log/axy8s-backend/app.log}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%X{traceId}] [%thread] %logger{36} - %msg%n"
+
