@@ -1146,7 +1146,10 @@ public class K8sDashboardController {
         if (port == null) {
             return "-";
         }
-        return (port.getName() != null ? port.getName() + " " : "") + value(port.getPort()) + "/" + value(port.getProtocol());
+        return (port.getName() != null ? port.getName() + " " : "")
+                + value(port.getContainerPort())
+                + "/"
+                + value(port.getProtocol());
     }
 
     private record WorkloadCard(String label, int total, int ready) {

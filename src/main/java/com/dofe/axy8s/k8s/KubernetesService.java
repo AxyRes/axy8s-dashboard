@@ -519,14 +519,6 @@ public class KubernetesService {
                 .get();
     }
 
-    public DaemonSet getDaemonSet(String namespace, String name) {
-        return client.apps()
-                .daemonSets()
-                .inNamespace(namespace)
-                .withName(name)
-                .get();
-    }
-
     public DaemonSet createOrUpdateDaemonSet(String namespace, DaemonSet daemonSet) {
         if (daemonSet.getMetadata() != null) {
             String bodyNs = daemonSet.getMetadata().getNamespace();
