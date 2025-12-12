@@ -56,9 +56,9 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         // QUAN TRỌNG: KHÔNG bật httpBasic nữa
-                .httpBasic(Customizer.withDefaults());
+                //.httpBasic(Customizer.withDefaults());
 
         return http.build();
     }
