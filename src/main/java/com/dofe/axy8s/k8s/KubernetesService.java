@@ -85,6 +85,13 @@ public class KubernetesService {
                 .getItems();
     }
 
+    public Pod getPod(String namespace, String name) {
+        return client.pods()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
+    }
+
     public String getPodLogs(String namespace, String podName, String containerName) {
         if (containerName != null && !containerName.isBlank()) {
             return client.pods()
@@ -502,6 +509,14 @@ public class KubernetesService {
                 .inNamespace(namespace)
                 .list()
                 .getItems();
+    }
+
+    public DaemonSet getDaemonSet(String namespace, String name) {
+        return client.apps()
+                .daemonSets()
+                .inNamespace(namespace)
+                .withName(name)
+                .get();
     }
 
     public DaemonSet getDaemonSet(String namespace, String name) {

@@ -53,6 +53,16 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/h2-console/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/",
+                                "/login",
+                                "/k8s/**",
+                                "/favicon.ico",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**",
+                                "/webjars/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
