@@ -1,0 +1,127 @@
+:root {
+    --sidebar-bg: #f8fafc;
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --text: #0f172a;
+    --muted: #6b7280;
+    --accent: #3b82f6;
+}
+
+[data-theme="dark"] {
+    --sidebar-bg: #0f172a;
+    --surface: #111827;
+    --border: #1f2937;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --accent: #60a5fa;
+    color-scheme: dark;
+}
+
+body.dashboard {
+    background: var(--surface);
+    color: var(--text);
+}
+
+.sidebar {
+    width: 260px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+}
+
+.sidebar-section {
+    color: var(--muted);
+    letter-spacing: 0.08em;
+}
+
+.sidebar .nav-link {
+    color: var(--text);
+    border-radius: 8px;
+    padding: 0.65rem 0.75rem;
+}
+
+.sidebar .nav-link:hover {
+    background: rgba(59, 130, 246, 0.08);
+    color: var(--accent);
+}
+
+.sidebar .nav-link.active {
+    background: rgba(59, 130, 246, 0.15);
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.topbar {
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.content {
+    background: var(--surface);
+}
+
+.page-header h2 {
+    color: var(--text);
+}
+
+.status-card {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+
+.status-bullet {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 10px;
+    font-size: 1.4rem;
+}
+
+.card {
+    border-color: var(--border);
+    background: var(--surface);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+}
+
+.table > :not(caption) > * > * {
+    background-color: transparent;
+    border-color: var(--border);
+    color: var(--text);
+}
+
+.table thead {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.badge.text-bg-light {
+    background: rgba(148, 163, 184, 0.15) !important;
+    color: var(--text) !important;
+}
+
+.badge.bg-light.text-dark {
+    background: rgba(148, 163, 184, 0.2) !important;
+    color: var(--text) !important;
+}
+
+[data-theme="dark"] .badge.text-bg-light {
+    background: rgba(148, 163, 184, 0.2) !important;
+}
+
+[data-theme="dark"] .badge.bg-light.text-dark {
+    background: rgba(148, 163, 184, 0.25) !important;
+}
+
+.table-responsive {
+    border-top: 1px solid var(--border);
+}
+
+@media (max-width: 991px) {
+    .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    }
+}
