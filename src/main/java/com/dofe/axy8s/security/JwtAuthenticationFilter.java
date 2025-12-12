@@ -3,6 +3,7 @@ package com.dofe.axy8s.security;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
@@ -34,14 +35,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+        String token = resolveToken(request);
 
-        if (!StringUtils.hasText(header) || !header.startsWith("Bearer ")) {
+        if (!StringUtils.hasText(token)) {
             filterChain.doFilter(request, response);
             return;
         }
-
-        String token = header.substring(7);
 
         try {
             String username = jwtService.getUsername(token);
@@ -65,5 +64,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String resolveToken(HttpServletRequest request) {
+        String header = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (StringUtils.hasText(header) && header.startsWith("Bearer ")) {
+            return header.substring(7);
+        }
+
+        if (request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("axy8s_token".equals(cookie.getName()) && StringUtils.hasText(cookie.getValue())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+
+        return null;
     }
 }
