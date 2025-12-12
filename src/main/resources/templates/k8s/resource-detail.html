@@ -1,0 +1,101 @@
+<div th:replace="~{layout :: layout(~{::content})}">
+    <div class="page-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <p class="text-muted mb-1">Namespace: <span th:text="${detail.namespace}"></span></p>
+            <h2 class="mb-0" th:text="${detail.title}"></h2>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a class="btn btn-outline-secondary" th:href="@{'/k8s/' + ${detail.namespace} + '/' + ${selectedResource}}">
+                <i class="bi bi-arrow-left-short me-1"></i>Back
+            </a>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-body d-flex flex-wrap gap-4 align-items-center">
+            <div>
+                <div class="text-muted small">Kind</div>
+                <div class="fw-semibold" th:text="${detail.kind}"></div>
+            </div>
+            <div>
+                <div class="text-muted small">Status</div>
+                <div class="fw-semibold" th:text="${detail.status}"></div>
+            </div>
+            <div>
+                <div class="text-muted small">Age</div>
+                <div class="fw-semibold" th:text="${detail.age}"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3 g-3">
+        <div class="col-lg-8">
+            <div class="card mb-3" th:each="section : ${detail.sections}">
+                <div class="card-header d-flex align-items-center gap-2">
+                    <i class="bi bi-layout-text-sidebar-reverse text-primary"></i>
+                    <span class="fw-semibold" th:text="${section.title}"></span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6" th:each="entry : ${section.items}">
+                            <div class="text-muted small" th:text="${entry.key}"></div>
+                            <div class="fw-semibold" th:text="${entry.value}"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" th:if="${#lists.size(detail.containers) > 0}">
+                <div class="card-header d-flex align-items-center gap-2">
+                    <i class="bi bi-box-seam text-primary"></i>
+                    <span class="fw-semibold">Containers</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table mb-0 align-middle">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Image</th>
+                                <th>Resources</th>
+                                <th>Ports</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="container : ${detail.containers}">
+                                <td th:text="${container.name}"></td>
+                                <td th:text="${container.image}"></td>
+                                <td th:text="${container.resources}"></td>
+                                <td th:text="${container.ports}"></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header d-flex align-items-center gap-2">
+                    <i class="bi bi-bookmark text-primary"></i>
+                    <span class="fw-semibold">Labels</span>
+                </div>
+                <div class="card-body d-flex flex-wrap gap-2" th:if="${!#lists.isEmpty(detail.labels)}">
+                    <span class="badge text-bg-secondary" th:each="label : ${detail.labels}" th:text="${label}"></span>
+                </div>
+                <div class="card-body text-muted" th:if="${#lists.isEmpty(detail.labels)}">No labels</div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header d-flex align-items-center gap-2">
+                    <i class="bi bi-card-text text-primary"></i>
+                    <span class="fw-semibold">Annotations</span>
+                </div>
+                <div class="card-body d-flex flex-column gap-2" th:if="${!#lists.isEmpty(detail.annotations)}">
+                    <div class="small" th:each="ann : ${detail.annotations}" th:text="${ann}"></div>
+                </div>
+                <div class="card-body text-muted" th:if="${#lists.isEmpty(detail.annotations)}">No annotations</div>
+            </div>
+        </div>
+    </div>
+</div>
