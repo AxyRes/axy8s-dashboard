@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(content)">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -87,7 +87,7 @@
             </div>
         </div>
 
-        <main class="content flex-fill px-3 px-lg-4 py-4" th:insert="~{::content}"></main>
+        <main class="content flex-fill px-3 px-lg-4 py-4" th:insert="${content}"></main>
     </div>
 </div>
 

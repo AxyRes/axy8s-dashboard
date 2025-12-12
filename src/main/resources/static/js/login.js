@@ -27,7 +27,8 @@ if (form) {
 
             const data = await response.json();
             localStorage.setItem('axy8s_token', data.token);
-            window.location.href = '/k8s';
+            document.cookie = `axy8s_token=${data.token}; Path=/; SameSite=Lax`;
+            window.location.href = '/dashboard';
         } catch (error) {
             alertBox.textContent = error.message;
             alertBox.classList.remove('d-none');

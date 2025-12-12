@@ -1,0 +1,55 @@
+<div th:replace="~{layout :: layout(~{::content})}">
+    <div class="page-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <p class="text-muted mb-1">Cluster status</p>
+            <h2 class="mb-0">Overview</h2>
+        </div>
+        <div class="text-muted">Select a namespace from the sidebar to explore workloads.</div>
+    </div>
+
+    <div class="row g-3 mt-1">
+        <div class="col-md-3" th:each="entry : ${#maps.entries(summary)}">
+            <div class="status-card d-flex align-items-center gap-3">
+                <div class="status-bullet text-primary">
+                    <i class="bi bi-collection"></i>
+                </div>
+                <div>
+                    <div class="text-muted small" th:text="${#strings.capitalize(entry.key)}"></div>
+                    <div class="fw-semibold fs-5" th:text="${entry.value}"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header d-flex align-items-center gap-2">
+            <i class="bi bi-hdd-network text-primary"></i>
+            <span class="fw-semibold">Namespaces</span>
+            <span class="badge text-bg-secondary" th:text="${#lists.size(namespaces)}"></span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(namespaces)}">
+                        <td colspan="2" class="text-center text-muted py-4">No namespaces found.</td>
+                    </tr>
+                    <tr th:each="ns : ${namespaces}">
+                        <td th:text="${ns.metadata.name}"></td>
+                        <td>
+                            <span class="badge text-bg-success" th:if="${ns.status?.phase == 'Active'}">Active</span>
+                            <span class="badge text-bg-secondary" th:if="${ns.status?.phase != 'Active'}" th:text="${ns.status?.phase}"></span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
