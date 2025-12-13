@@ -721,7 +721,7 @@ public class K8sDashboardController {
     }
 
     private ResourceDetail podDetail(String namespace, String name) {
-        Pod pod = kubernetesService.getPod(namespace, name);
+        Pod pod = kubernetesService.findPod(namespace, name);
         if (pod == null) {
             return missingDetail("Pod", namespace, name);
         }

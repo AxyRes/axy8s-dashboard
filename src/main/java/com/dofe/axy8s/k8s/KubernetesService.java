@@ -85,14 +85,7 @@ public class KubernetesService {
                 .getItems();
     }
 
-    public Pod getPod(String namespace, String name) {
-        return client.pods()
-                .inNamespace(namespace)
-                .withName(name)
-                .get();
-    }
-
-    public Pod getPod(String namespace, String name) {
+    public Pod findPod(String namespace, String name) {
         return client.pods()
                 .inNamespace(namespace)
                 .withName(name)
