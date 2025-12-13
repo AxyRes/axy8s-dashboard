@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle} ?: 'Kubernetes Dashboard'"></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+</head>
+<body class="dashboard" data-theme="light">
+<div class="d-flex flex-column flex-lg-row min-vh-100">
+    <header class="sidebar d-flex flex-row flex-lg-column align-items-center py-3 px-2">
+        <div class="d-flex align-items-center w-100 mb-3 mb-lg-4 px-lg-3">
+            <i class="bi bi-grid-1x2-fill text-primary me-2 fs-4"></i>
+            <span class="fw-semibold">Kubernetes</span>
+        </div>
+        <div class="w-100">
+            <p class="sidebar-section px-lg-3 text-uppercase small mb-1">Namespaces</p>
+            <div class="px-lg-3 mb-2">
+                <select class="form-select form-select-sm" onchange="if(this.value){window.location=this.value;}" th:if="${namespaces}">
+                    <option th:each="ns : ${namespaces}"
+                            th:value="@{'/k8s/' + ${ns.metadata.name} + '/' + ${selectedResource}}"
+                            th:selected="${selectedNamespace} == ${ns.metadata.name}"
+                            th:text="${ns.metadata.name}">default</option>
+                </select>
+            </div>
+
+            <p class="sidebar-section px-lg-3 text-uppercase small mb-1">Workloads</p>
+            <nav class="nav flex-lg-column w-100">
+                <a class="nav-link d-flex align-items-center" th:each="item : ${navItems}" th:href="${item.href}" th:classappend="${item.active} ? ' active'">
+                    <i class="bi me-2" th:classappend="${item.icon}"></i>
+                    <span th:text="${item.label}"></span>
+                </a>
+            </nav>
+
+            <p class="sidebar-section px-lg-3 text-uppercase small mb-1">Cluster</p>
+            <nav class="nav flex-lg-column w-100">
+                <a class="nav-link d-flex align-items-center" th:each="item : ${clusterNavItems}" th:href="${item.href}" th:classappend="${item.active} ? ' active'">
+                    <i class="bi me-2" th:classappend="${item.icon}"></i>
+                    <span th:text="${item.label}"></span>
+                </a>
+            </nav>
+        </div>
+        <div class="mt-auto w-100 px-lg-3">
+            <div class="d-flex align-items-center justify-content-between">
+                <span class="small text-muted">Theme</span>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="themeToggle">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-fill d-flex flex-column">
+        <div class="topbar d-flex align-items-center justify-content-between px-3 px-lg-4 py-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="dropdown" th:if="${namespaces}">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-hdd-network me-2"></i><span th:text="${selectedNamespace != null} ? ${selectedNamespace} : 'All namespaces'"></span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li class="dropdown-header">Namespace</li>
+                        <li th:each="ns : ${namespaces}">
+                            <a class="dropdown-item" th:href="@{'/k8s/' + ${ns.metadata.name} + '/' + ${selectedResource}}"
+                               th:text="${ns.metadata.name}"></a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="text-muted small">Explore workloads across your cluster</div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-outline-secondary d-none d-lg-inline-flex">
+                    <i class="bi bi-columns-gap me-2"></i>Customize
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-person-circle me-2"></i>Account
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#">Profile</a></li>
+                        <li><a class="dropdown-item" href="#">Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/swagger-ui/index.html">API Docs</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <main class="content flex-fill px-3 px-lg-4 py-4" th:insert="~{${content}}"></main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/theme-toggle.js"></script>
+</body>
+</html>
